@@ -1,6 +1,7 @@
 import sqlite3Lib from 'sqlite3'
 const sqlite3 = sqlite3Lib.verbose()
 import { config } from '../config'
+import { Utils as StringUtils } from '@shardus/types'
 let db: sqlite3Lib.Database
 
 // Additional databases
@@ -24,7 +25,7 @@ export async function init(config: DbOptions): Promise<void> {
     console.log('Shardeum indexer database initialized.')
   }
   db.on('profile', (sql, time) => {
-    if (time > 500) {
+    if (time > 500 && time < 1000) {
       console.log('SLOW QUERY', sql, time)
     } else if (time > 1000) {
       console.log('VERY SLOW QUERY', sql, time)
@@ -140,7 +141,7 @@ export function extractValues(object: object): string[] {
   try {
     const inputs: string[] = []
     for (let value of Object.values(object)) {
-      if (typeof value === 'object') value = JSON.stringify(value)
+      if (typeof value === 'object') value = StringUtils.safeStringify(value)
       inputs.push(value)
     }
     return inputs
@@ -156,7 +157,7 @@ export function extractValuesFromArray(arr: object[]): string[] {
     const inputs: string[] = []
     for (const object of arr) {
       for (let value of Object.values(object)) {
-        if (typeof value === 'object') value = JSON.stringify(value)
+        if (typeof value === 'object') value = StringUtils.safeStringify(value)
         inputs.push(value)
       }
     }
