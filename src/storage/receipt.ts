@@ -2,6 +2,7 @@ import { config } from '../config'
 import * as AccountDB from './account'
 import * as TransactionDB from './transaction'
 import * as AccountHistoryStateDB from './accountHistoryState'
+import { Utils as StringUtils } from '@shardus/types'
 import {
   AccountType,
   TokenTx,
@@ -22,10 +23,10 @@ import { forwardReceiptData } from '../log_subscription/CollectorSocketconnectio
 
 type DbReceipt = Receipt & {
   tx: string
-  beforeStateAccounts: string
-  accounts: string
+  beforeStates: string
+  afterStates: string
   appReceiptData: string | null
-  appliedReceipt: string
+  signedReceipt: string
 }
 
 export const receiptsMap: Map<string, number> = new Map()
@@ -72,24 +73,21 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
   let combineTokens: Token[] = [] // For Tokens owned by an address
   let accountHistoryStateList: AccountHistoryStateDB.AccountHistoryState[] = []
   for (const receiptObj of receipts) {
-    const { accounts, cycle, appReceiptData, tx, timestamp, appliedReceipt } = receiptObj
+    const { afterStates, cycle, appReceiptData, tx, timestamp, signedReceipt } = receiptObj
     if (receiptsMap.has(tx.txId) && receiptsMap.get(tx.txId) === timestamp) {
       continue
     }
+    let modifiedReceiptObj = {
+      ...receiptObj,
+      beforeStates: config.storeReceiptBeforeStates ? receiptObj.beforeStates : [],
+    }
     if (saveOnlyNewData) {
       const receiptExist = await queryReceiptByReceiptId(tx.txId)
-      if (!receiptExist) combineReceipts.push(receiptObj as unknown as Receipt)
-    } else combineReceipts.push(receiptObj as unknown as Receipt)
+      if (!receiptExist) combineReceipts.push(modifiedReceiptObj as unknown as Receipt)
+    } else combineReceipts.push(modifiedReceiptObj as unknown as Receipt)
     let txReceipt: WrappedAccount = appReceiptData
     receiptsMap.set(tx.txId, tx.timestamp)
 
-    // If the receipt is a challenge, then skip updating its accounts data or transaction data
-    if (
-      appliedReceipt &&
-      appliedReceipt.confirmOrChallenge &&
-      appliedReceipt.confirmOrChallenge.message === 'challenge'
-    )
-      continue
     // Forward receipt data to LogServer
     if (config.enableCollectorSocketServer) await forwardReceiptData([receiptObj])
     // Receipts size can be big, better to save per 100
@@ -99,7 +97,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
     }
     if (!config.processData.indexReceipt) continue
     const storageKeyValueMap = {}
-    for (const account of accounts) {
+    for (const account of afterStates) {
       const accountType = account.data.accountType as AccountType
       const accObj = {
         accountId: account.accountId,
@@ -293,16 +291,16 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
     if (config.saveAccountHistoryState) {
       if (
         receiptObj.globalModification === false &&
-        appliedReceipt &&
+        signedReceipt &&
         blockNumber &&
         blockHash &&
-        appliedReceipt.appliedVote.account_id.length > 0
+        signedReceipt.proposal.accountIDs.length > 0
       ) {
-        for (let i = 0; i < appliedReceipt.appliedVote.account_id.length; i++) {
+        for (let i = 0; i < signedReceipt.proposal.accountIDs.length; i++) {
           const accountHistoryState = {
-            accountId: appliedReceipt.appliedVote.account_id[i],
-            beforeStateHash: appliedReceipt.appliedVote.account_state_hash_before[i],
-            afterStateHash: appliedReceipt.appliedVote.account_state_hash_after[i],
+            accountId: signedReceipt.proposal.accountIDs[i],
+            beforeStateHash: signedReceipt.proposal.beforeStateHashes[i],
+            afterStateHash: signedReceipt.proposal.afterStateHashes[i],
             timestamp,
             blockNumber,
             blockHash,
@@ -314,8 +312,8 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
         if (receiptObj.globalModification === true) {
           console.log(`Receipt ${tx.txId} with timestamp ${timestamp} has globalModification as true`)
         }
-        if (receiptObj.globalModification === false && !appliedReceipt) {
-          console.error(`Receipt ${tx.txId} with timestamp ${timestamp} has no appliedReceipt`)
+        if (receiptObj.globalModification === false && !signedReceipt) {
+          console.error(`Receipt ${tx.txId} with timestamp ${timestamp} has no signedReceipt`)
         }
         if (!blockNumber || !blockHash) {
           console.error(`Receipt ${tx.txId} with timestamp ${timestamp} has no blockNumber or blockHash`)
@@ -470,11 +468,12 @@ export async function queryReceiptCountBetweenCycles(start: number, end: number)
 }
 
 function deserializeDbReceipt(receipt: DbReceipt): void {
-  if (receipt.tx) receipt.tx = JSON.parse(receipt.tx)
-  if (receipt.beforeStateAccounts) receipt.beforeStateAccounts = JSON.parse(receipt.beforeStateAccounts)
-  if (receipt.accounts) receipt.accounts = JSON.parse(receipt.accounts)
-  if (receipt.appReceiptData) receipt.appReceiptData = JSON.parse(receipt.appReceiptData)
-  if (receipt.appliedReceipt) receipt.appliedReceipt = JSON.parse(receipt.appliedReceipt)
+  receipt.tx &&= StringUtils.safeJsonParse(receipt.tx)
+  receipt.beforeStates &&= StringUtils.safeJsonParse(receipt.beforeStates)
+  receipt.afterStates &&= StringUtils.safeJsonParse(receipt.afterStates)
+  receipt.appReceiptData &&= StringUtils.safeJsonParse(receipt.appReceiptData)
+  receipt.signedReceipt &&= StringUtils.safeJsonParse(receipt.signedReceipt)
+
   // globalModification is stored as 0 or 1 in the database, convert it to boolean
   receipt.globalModification = (receipt.globalModification as unknown as number) === 1
 }

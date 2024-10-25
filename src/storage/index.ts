@@ -12,7 +12,7 @@ export const isBlockIndexingEnabled = (): boolean => {
 
 export const initializeDB = async (): Promise<void> => {
   await db.init({
-    defaultDbSqlitePath: 'db.sqlite3',
+    defaultDbSqlitePath: config.dbPath,
     enableShardeumIndexer: config.enableShardeumIndexer,
     shardeumIndexerSqlitePath: config.shardeumIndexerSqlitePath,
   })
@@ -90,7 +90,7 @@ export const initializeDB = async (): Promise<void> => {
   )
 
   await db.runCreate(
-    'CREATE TABLE if not exists `receipts` (`receiptId` TEXT NOT NULL UNIQUE PRIMARY KEY, `tx` JSON NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `beforeStateAccounts` JSON, `accounts` JSON NOT NULL, `appliedReceipt` JSON NOT NULL, `appReceiptData` JSON, `executionShardKey` TEXT NOT NULL, `globalModification` BOOLEAN NOT NULL)'
+    'CREATE TABLE if not exists `receipts` (`receiptId` TEXT NOT NULL UNIQUE PRIMARY KEY, `tx` JSON NOT NULL, `cycle` NUMBER NOT NULL, `applyTimestamp` BIGINT NOT NULL, `timestamp` BIGINT NOT NULL, `signedReceipt` JSON NOT NULL, `afterStates` JSON, `beforeStates` JSON, `appReceiptData` JSON, `executionShardKey` TEXT NOT NULL, `globalModification` BOOLEAN NOT NULL)'
   )
   // await db.runCreate('Drop INDEX if exists `receipts_idx`');
   await db.runCreate('CREATE INDEX if not exists `receipts_idx` ON `receipts` (`cycle` ASC, `timestamp` ASC)')

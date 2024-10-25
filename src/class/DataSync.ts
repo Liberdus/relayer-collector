@@ -7,6 +7,7 @@ import * as Receipt from '../storage/receipt'
 import * as OriginalTxData from '../storage/originalTxData'
 import { config, DISTRIBUTOR_URL } from '../config'
 import { Cycle as CycleType } from '../types'
+import { Utils as StringUtils } from '@shardus/types'
 
 export let needSyncing = false
 
@@ -70,6 +71,9 @@ export const queryFromDistributor = async (
         'Content-Type': 'application/json',
       },
       timeout: 45000,
+      transformResponse: (res) => {
+        return StringUtils.safeJsonParse(res)
+      },
     })
     return response
   } catch (e) {
@@ -81,7 +85,7 @@ export const queryFromDistributor = async (
 export async function compareWithOldReceiptsData(
   lastStoredReceiptCycle = 0
 ): Promise<{ success: boolean; matchedCycle: number }> {
-  const numberOfCyclesTocompare = 10
+  const numberOfCyclesTocompare = 20
   const endCycle = lastStoredReceiptCycle
   const startCycle = endCycle - numberOfCyclesTocompare > 0 ? endCycle - numberOfCyclesTocompare : 0
   let downloadedReceiptCountByCycles: { cycle: number; receipts: number }[]
@@ -118,7 +122,7 @@ export async function compareWithOldReceiptsData(
 export async function compareWithOldOriginalTxsData(
   lastStoredOriginalTxDataCycle = 0
 ): Promise<{ success: boolean; matchedCycle: number }> {
-  const numberOfCyclesTocompare = 10
+  const numberOfCyclesTocompare = 20
   const endCycle = lastStoredOriginalTxDataCycle
   const startCycle = endCycle - numberOfCyclesTocompare > 0 ? endCycle - numberOfCyclesTocompare : 0
   let downloadedOriginalTxDataCountByCycles: { cycle: number; originalTxsData: number }[]
@@ -163,7 +167,7 @@ export const compareWithOldCyclesData = async (
 ): Promise<{ success: boolean; cycle: number }> => {
   let downloadedCycles: CycleType[]
 
-  const numberOfCyclesTocompare = 10
+  const numberOfCyclesTocompare = 20
   const response = await queryFromDistributor(DataType.CYCLE, {
     start: lastCycleCounter - numberOfCyclesTocompare,
     end: lastCycleCounter - 1,
@@ -194,7 +198,7 @@ export const compareWithOldCyclesData = async (
     const oldCycle = oldCycles[i]
     /* eslint-enable security/detect-object-injection */
     console.log(downloadedCycle.counter, oldCycle.cycleRecord.counter)
-    if (JSON.stringify(downloadedCycle) !== JSON.stringify(oldCycle.cycleRecord)) {
+    if (StringUtils.safeStringify(downloadedCycle) !== StringUtils.safeStringify(oldCycle.cycleRecord)) {
       return {
         success,
         cycle,
