@@ -119,7 +119,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
 
     if (txReceipt) {
       console.log('txReceipt', txReceipt)
-      const transactionType = txReceipt.transactionType as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
+      const transactionType = txReceipt.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
       const txFrom = txReceipt.from // be sure to update with the correct field of the tx sender
       const txTo = txReceipt.to // be sure to update with the correct field of the tx recipient
       const txObj: Transaction = {

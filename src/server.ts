@@ -419,7 +419,7 @@ const start = async (): Promise<void> => {
       transactions: [] as Transaction[],
     }
     if (query.txSearchType) {
-      txSearchType = parseInt(query.txSearchType)
+      txSearchType = query.txSearchType as TransactionSearchType
       // Check if the parsed value is a valid enum value
       if (!Object.values(TransactionSearchType).includes(txSearchType)) {
         reply.send({ success: false, error: 'Invalid transaction search type' })
@@ -484,7 +484,7 @@ const start = async (): Promise<void> => {
         return
       }
     }
-    if (accountId || startCycle > 0 || endCycle > 0 || page > 0) {
+    if (accountId || startCycle > 0 || endCycle > 0 || page > 0 || txSearchType) {
       totalTransactions = await TransactionDB.queryTransactionCount(
         accountId,
         txSearchType,

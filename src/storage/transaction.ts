@@ -64,7 +64,7 @@ export async function processTransactionData(transactions: Transaction[]): Promi
   const bucketSize = 1000
   let combineTransactions: Transaction[] = []
   for (const transaction of transactions) {
-    const transactionType = transaction.data.transactionType as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
+    const transactionType = transaction.data.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
     const txFrom = transaction.data.from // be sure to update with the correct field of the tx sender
     const txTo = transaction.data.to // be sure to update with the correct field of the tx recipient
     const txObj: Transaction = {
