@@ -10,10 +10,15 @@ export interface Transaction {
   txTo?: string
 }
 
-export enum TransactionType {}
+export enum TransactionType {
+  Transfer = 'transfer',
+  Message = 'message',
+}
 
 export enum TransactionSearchType {
-  All = 0,
+  All = 'all',
+  Transfer = 'transfer',
+  Message = 'message',
   // e.g AllExceptInternalTx = 1 for all except InternalTx
 }
 
