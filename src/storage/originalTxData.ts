@@ -61,7 +61,7 @@ export async function processOriginalTxData(
     if (!config.processData.indexOriginalTxData) combineOriginalTxsData.push(originalTxData)
     else {
       try {
-        const transactionType = originalTxData.originalTxData.tx.transactionType as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
+        const transactionType = originalTxData.originalTxData.tx.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
         const txFrom = originalTxData.originalTxData.tx.from // be sure to update with the correct field of the tx sender
         const txTo = originalTxData.originalTxData.tx.to // be sure to update with the correct field of the tx recipient
         combineOriginalTxsData.push({
