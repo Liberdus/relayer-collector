@@ -126,30 +126,32 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       // }
     }
 
+    const txObj = {
+      txId: tx.txId,
+      cycleNumber: cycle,
+      timestamp: tx.timestamp,
+      originalTxData: tx.originalTxData || {},
+    } as Transaction
+
     if (txReceipt) {
       console.log('txReceipt', txReceipt)
-      const transactionType = txReceipt.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
-      const txFrom = txReceipt.from // be sure to update with the correct field of the tx sender
-      const txTo = txReceipt.to // be sure to update with the correct field of the tx recipient
-      const txObj: Transaction = {
-        txId: tx.txId,
-        cycleNumber: cycle,
-        timestamp: tx.timestamp,
-        data: txReceipt,
-        transactionType,
-        txFrom,
-        txTo,
-        originalTxData: tx.originalTxData || {},
-      }
-      const transactionExist = await TransactionDB.queryTransactionByTxId(tx.txId)
-      if (config.verbose) console.log('transactionExist', transactionExist)
-      if (!transactionExist) {
-        combineTransactions.push(txObj)
-      } else {
-        if (transactionExist.timestamp < txObj.timestamp) {
-          await TransactionDB.insertTransaction(txObj)
-        }
-      }
+      txObj.transactionType = txReceipt.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
+      txObj.txFrom = txReceipt.from // be sure to update with the correct field of the tx sender
+      txObj.txTo = txReceipt.to // be sure to update with the correct field of the tx recipient
+      txObj.data = txReceipt
+    } else {
+      // Extract tx receipt from original tx data
+      txObj.transactionType = tx.originalTxData.tx.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
+      txObj.txFrom = tx.originalTxData.tx.from // be sure to update with the correct field of the tx sender
+      txObj.txTo = tx.originalTxData.tx.to // be sure to update with the correct field of the tx recipient
+      txObj.data = {}
+    }
+    const transactionExist = await TransactionDB.queryTransactionByTxId(tx.txId)
+    if (config.verbose) console.log('transactionExist', transactionExist)
+    if (!transactionExist) {
+      combineTransactions.push(txObj)
+    } else if (transactionExist.timestamp < txObj.timestamp) {
+      await TransactionDB.insertTransaction(txObj)
     }
     if (config.saveAccountHistoryState) {
       // Note: This has to be changed once we change the way the global modification tx consensus is updated
