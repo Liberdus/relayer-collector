@@ -28,7 +28,7 @@ export type SignedReceipt = {
  */
 export interface ArchiverReceipt {
   tx: {
-    originalTxData: object
+    originalTxData: object & { tx: any } // eslint-disable-line @typescript-eslint/no-explicit-any
     txId: string
     timestamp: number
   }
