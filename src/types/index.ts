@@ -1,14 +1,3 @@
-export interface NetworkParameters {
-  title: string
-  description: string
-  nodeRewardInterval: number
-  nodeRewardAmount: number
-  nodePenalty: number
-  stakeRequired: number
-  maintenanceInterval: number
-  maintenanceFee: number
-}
-
 export enum TxDataType {
   RECEIPT = 'RECEIPT',
   ORIGINAL_TX_DATA = 'ORIGINAL_TX_DATA',

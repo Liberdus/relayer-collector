@@ -66,41 +66,6 @@ interface RequestParams {
 }
 */
 
-interface RequestQuery {
-  page: string
-  count: string
-  from: string
-  to: string
-  cycleNumber: string
-  txId: string
-  txHash: string
-  address: string
-  contractAddress: string
-  token: string
-  filterAddress: string
-  txType: string
-  startCycle: string
-  endCycle: string
-  start: string
-  end: string
-  marker: string
-  type: string //contract accounts list query
-  accountType: string
-  accountId: string
-  topics: string
-  responseType: string
-  fromBlock: string
-  toBlock: string
-  totalStakeData: string
-  beforeTimestamp: string
-  afterTimestamp: string
-  blockNumber: string
-  blockHash: string
-  decode: string // For originalTxsData, reply the query result by decoding the data
-  pending: string // For pending txs (AllExceptInternalTx) for pending txs page
-  countOnly: string // true to return only the count of the transactions
-}
-
 // Setup Log Directory
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
