@@ -26,11 +26,6 @@ export type TransactionResponse = {
   totalTransactions?: number
 }
 
-export type AddressResponse = {
-  success: boolean
-  accounts?: unknown
-}
-
 export type AccountResponse = {
   success: boolean
   accounts?: unknown

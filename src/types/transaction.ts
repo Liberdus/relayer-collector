@@ -21,5 +21,3 @@ export enum TransactionSearchType {
   Message = 'message',
   // e.g AllExceptInternalTx = 1 for all except InternalTx
 }
-
-export type TxStatus = 'Pending' | 'Expired'
