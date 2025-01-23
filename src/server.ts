@@ -17,7 +17,7 @@ import { Account, AccountSearchType, OriginalTxResponse, Transaction, Transactio
 import { AccountResponse, ReceiptResponse, TransactionResponse } from './types'
 import * as utils from './utils'
 // config variables
-import { config as CONFIG, config, envEnum } from './config'
+import { config, envEnum } from './config'
 import path from 'path'
 import fs from 'fs'
 import { Utils as StringUtils } from '@shardus/types'
@@ -45,19 +45,19 @@ if (config.env == envEnum.DEV) {
   }
 }
 
-crypto.init(CONFIG.hashKey)
+crypto.init(config.hashKey)
 crypto.setCustomStringifier(StringUtils.safeStringify, 'shardus_safeStringify')
 
 if (process.env.PORT) {
-  CONFIG.port.server = process.env.PORT
+  config.port.server = process.env.PORT
 }
 
 console.log(process.argv)
 const port = process.argv[2]
 if (port) {
-  CONFIG.port.server = port
+  config.port.server = port
 }
-console.log('Port', CONFIG.port.server)
+console.log('Port', config.port.server)
 
 // commented interface b/c it was never used; caused linting error
 /*
@@ -107,13 +107,13 @@ const start = async (): Promise<void> => {
   Storage.addExitListeners()
 
   const server = Fastify({
-    logger: CONFIG.fastifyDebugLog,
+    logger: config.fastifyDebugLog,
   })
 
   await server.register(FastifyWebsocket)
   await server.register(fastifyCors)
   await server.register(fastifyRateLimit, {
-    max: CONFIG.rateLimit,
+    max: config.rateLimit,
     timeWindow: '1 minute',
     allowList: ['127.0.0.1', 'localhost'],
   })
@@ -140,7 +140,7 @@ const start = async (): Promise<void> => {
   server.get('/usage/metrics', usage.usageMetricsHandler)
 
   server.get('/port', (req, reply) => {
-    reply.send({ port: CONFIG.port.server })
+    reply.send({ port: config.port.server })
   })
 
   type CycleDataRequest = FastifyRequest<{
@@ -180,8 +180,11 @@ const start = async (): Promise<void> => {
         reply.send({ success: false, error: 'Invalid count' })
         return
       }
-      if (count > 100) {
-        reply.send({ success: false, error: 'Maximum count is 100' })
+      if (count > config.requestLimits.MAX_CYCLES_PER_REQUEST) {
+        reply.send({
+          success: false,
+          error: `Maximum count is ${config.requestLimits.MAX_CYCLES_PER_REQUEST}`,
+        })
         return
       }
       cycles = await CycleDB.queryLatestCycleRecords(count)
@@ -205,7 +208,7 @@ const start = async (): Promise<void> => {
         return
       }
       cycles = await CycleDB.queryCycleRecordsBetween(from, to)
-      /* prettier-ignore */ if (CONFIG.verbose) console.log('cycles', cycles);
+      /* prettier-ignore */ if (config.verbose) console.log('cycles', cycles);
     } else if (query.marker) {
       const cycle = await CycleDB.queryCycleByMarker(query.marker)
       if (cycle) {
@@ -284,8 +287,11 @@ const start = async (): Promise<void> => {
         reply.send({ success: false, error: 'Invalid count' })
         return
       }
-      if (count > 100) {
-        reply.send({ success: false, error: 'Maximum count is 100' })
+      if (count > config.requestLimits.MAX_ACCOUNTS_PER_REQUEST) {
+        reply.send({
+          success: false,
+          error: `Maximum count is ${config.requestLimits.MAX_ACCOUNTS_PER_REQUEST}`,
+        })
         return
       }
       res.accounts = await AccountDB.queryAccounts(0, count, null, null, accountSearchType)
@@ -316,8 +322,11 @@ const start = async (): Promise<void> => {
           reply.send({ success: false, error: 'Invalid end cycle number' })
           return
         }
-        if (endCycle - startCycle > 100) {
-          reply.send({ success: false, error: 'The cycle range is too big. Max cycle range is 100 cycles.' })
+        if (endCycle - startCycle > config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST) {
+          reply.send({
+            success: false,
+            error: `The cycle range is too big. Max cycle range is ${config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST} cycles.`,
+          })
           return
         }
       }
@@ -386,7 +395,7 @@ const start = async (): Promise<void> => {
       reply.send({ success: false, error: err })
       return
     }
-    /* prettier-ignore */ if (CONFIG.verbose) console.log('Request', _request.query);
+    /* prettier-ignore */ if (config.verbose) console.log('Request', _request.query);
     const query = _request.query
     // Check at least one of the query parameters is present
     if (
@@ -432,8 +441,11 @@ const start = async (): Promise<void> => {
         reply.send({ success: false, error: 'Invalid count' })
         return
       }
-      if (count > 100) {
-        reply.send({ success: false, error: 'Maximum count is 100' })
+      if (count > config.requestLimits.MAX_TRANSACTIONS_PER_REQUEST) {
+        reply.send({
+          success: false,
+          error: `Maximum count is ${config.requestLimits.MAX_TRANSACTIONS_PER_REQUEST}`,
+        })
         return
       }
       res.transactions = await TransactionDB.queryTransactions(0, count, null, txSearchType)
@@ -471,8 +483,11 @@ const start = async (): Promise<void> => {
           reply.send({ success: false, error: 'Invalid end cycle number' })
           return
         }
-        if (endCycle - startCycle > 100) {
-          reply.send({ success: false, error: 'The cycle range is too big. Max cycle range is 100 cycles.' })
+        if (endCycle - startCycle > config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST) {
+          reply.send({
+            success: false,
+            error: `The cycle range is too big. Max cycle range is ${config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST} cycles.`,
+          })
           return
         }
       }
@@ -539,7 +554,7 @@ const start = async (): Promise<void> => {
       reply.send({ success: false, error: err })
       return
     }
-    /* prettier-ignore */ if (CONFIG.verbose) console.log('Request', _request.query);
+    /* prettier-ignore */ if (config.verbose) console.log('Request', _request.query);
     const query = _request.query
     // Check at least one of the query parameters is present
     if (!query.count && !query.txId && !query.startCycle && !query.endCycle) {
@@ -565,8 +580,11 @@ const start = async (): Promise<void> => {
         reply.send({ success: false, error: 'Invalid count' })
         return
       }
-      if (count > 100) {
-        reply.send({ success: false, error: 'Maximum count is 100' })
+      if (count > config.requestLimits.MAX_RECEIPTS_PER_REQUEST) {
+        reply.send({
+          success: false,
+          error: `Maximum count is ${config.requestLimits.MAX_RECEIPTS_PER_REQUEST}`,
+        })
         return
       }
       res.receipts = await ReceiptDB.queryReceipts(0, count)
@@ -597,8 +615,11 @@ const start = async (): Promise<void> => {
           reply.send({ success: false, error: 'Invalid end cycle number' })
           return
         }
-        if (endCycle - startCycle > 100) {
-          reply.send({ success: false, error: 'The cycle range is too big. Max cycle range is 100 cycles.' })
+        if (endCycle - startCycle > config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST) {
+          reply.send({
+            success: false,
+            error: `The cycle range is too big. Max cycle range is ${config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST} cycles.`,
+          })
           return
         }
       }
@@ -660,7 +681,7 @@ const start = async (): Promise<void> => {
       reply.send({ success: false, error: err })
       return
     }
-    /* prettier-ignore */ if (CONFIG.verbose) console.log('Request', _request.query);
+    /* prettier-ignore */ if (config.verbose) console.log('Request', _request.query);
     const query = _request.query
     // Check at least one of the query parameters is present
     if (
@@ -694,8 +715,11 @@ const start = async (): Promise<void> => {
         reply.send({ success: false, error: 'Invalid count' })
         return
       }
-      if (count > 100) {
-        reply.send({ success: false, error: 'Maximum count is 100' })
+      if (count > config.requestLimits.MAX_ORIGINAL_TXS_PER_REQUEST) {
+        reply.send({
+          success: false,
+          error: `Maximum count is ${config.requestLimits.MAX_ORIGINAL_TXS_PER_REQUEST}`,
+        })
         return
       }
       res.originalTxs = await OriginalTxDataDB.queryOriginalTxsData(0, count)
@@ -733,8 +757,11 @@ const start = async (): Promise<void> => {
           reply.send({ success: false, error: 'Invalid end cycle number' })
           return
         }
-        if (endCycle - startCycle > 100) {
-          reply.send({ success: false, error: 'The cycle range is too big. Max cycle range is 100 cycles.' })
+        if (endCycle - startCycle > config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST) {
+          reply.send({
+            success: false,
+            error: `The cycle range is too big. Max cycle range is ${config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST} cycles.`,
+          })
           return
         }
       }
@@ -789,7 +816,7 @@ const start = async (): Promise<void> => {
     } // Initialize 'res' with an empty object
 
     res.totalCycles = await CycleDB.queryCycleCount()
-    if (CONFIG.processData.indexReceipt) {
+    if (config.processData.indexReceipt) {
       res.totalAccounts = await AccountDB.queryAccountCount(AccountSearchType.All)
       res.totalTransactions = await TransactionDB.queryTransactionCount()
     }
@@ -800,7 +827,7 @@ const start = async (): Promise<void> => {
 
   server.listen(
     {
-      port: Number(CONFIG.port.server),
+      port: Number(config.port.server),
       host: '0.0.0.0',
     },
     async (err) => {
@@ -809,7 +836,7 @@ const start = async (): Promise<void> => {
         console.log(err)
         throw err
       }
-      console.log('Server is listening on port:', CONFIG.port.server)
+      console.log('Server is listening on port:', config.port.server)
     }
   )
 }

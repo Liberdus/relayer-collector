@@ -1,7 +1,7 @@
 import moment from 'moment'
 import type { FastifyError, FastifyReply, FastifyRequest, HookHandlerDoneFunction } from 'fastify'
 
-import { config as CONFIG } from '../config'
+import { config } from '../config'
 
 interface UsageMetrics {
   enabled: boolean
@@ -20,7 +20,7 @@ const usageMetrics: UsageMetrics = {
 const validateSecurityKey = (req: FastifyRequest, reply: FastifyReply): boolean => {
   const securityKey = req.headers['x-usage-key']
 
-  if (CONFIG.USAGE_ENDPOINTS_KEY === securityKey) {
+  if (config.USAGE_ENDPOINTS_KEY === securityKey) {
     return true
   }
 

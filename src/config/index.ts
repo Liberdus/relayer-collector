@@ -62,12 +62,21 @@ export interface Config {
   saveAccountHistoryState: boolean
   collectorMode: string
   storeReceiptBeforeStates: boolean
+  requestLimits: {
+    MAX_RECEIPTS_PER_REQUEST: number
+    MAX_ORIGINAL_TXS_PER_REQUEST: number
+    MAX_CYCLES_PER_REQUEST: number
+    MAX_ACCOUNTS_PER_REQUEST: number
+    MAX_TRANSACTIONS_PER_REQUEST: number
+    MAX_BETWEEN_CYCLES_PER_REQUEST: number
+    MAX_ACCOUNT_HISTORY_STATES_PER_REQUEST: number
+  }
 }
 
 let config: Config = {
   env: process.env.SHARDEUM_COLLECTOR_MODE || envEnum.PROD, //default safe if env is not set
   host: process.env.HOST || '127.0.0.1',
-  dbPath: process.env.COLLECTOR_DB_PATH || "db.sqlite3",
+  dbPath: process.env.COLLECTOR_DB_PATH || 'db.sqlite3',
   dataLogWrite: false,
   dataLogWriter: {
     dirName: 'data-logs',
@@ -112,6 +121,15 @@ let config: Config = {
   saveAccountHistoryState: true,
   collectorMode: process.env.COLLECTOR_MODE || collectorMode.WS.toString(),
   storeReceiptBeforeStates: true,
+  requestLimits: {
+    MAX_RECEIPTS_PER_REQUEST: 100,
+    MAX_ORIGINAL_TXS_PER_REQUEST: 100,
+    MAX_CYCLES_PER_REQUEST: 100,
+    MAX_ACCOUNTS_PER_REQUEST: 100,
+    MAX_TRANSACTIONS_PER_REQUEST: 100,
+    MAX_BETWEEN_CYCLES_PER_REQUEST: 100,
+    MAX_ACCOUNT_HISTORY_STATES_PER_REQUEST: 100,
+  },
 }
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`

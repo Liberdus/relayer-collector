@@ -218,16 +218,15 @@ export const downloadTxsDataAndCycles = async (
   totalCyclesToSync: number,
   fromCycle = 0
 ): Promise<void> => {
-  const bucketSize = 100
   let completeForReceipt = false
   let completeForCycle = false
   let completeForOriginalTxData = false
   let startReceipt = fromReceipt
   let startCycle = fromCycle
   let startOriginalTxData = fromOriginalTxData
-  let endReceipt = startReceipt + bucketSize
-  let endCycle = startCycle + bucketSize
-  let endOriginalTxData = startOriginalTxData + bucketSize
+  let endReceipt = startReceipt + config.requestLimits.MAX_RECEIPTS_PER_REQUEST
+  let endCycle = startCycle + config.requestLimits.MAX_CYCLES_PER_REQUEST
+  let endOriginalTxData = startOriginalTxData + config.requestLimits.MAX_ORIGINAL_TXS_PER_REQUEST
   if (fromCycle >= totalCyclesToSync) completeForCycle = true
   if (fromReceipt >= totalReceiptsToSync) completeForReceipt = true
   if (fromOriginalTxData >= totalOriginalTxsToSync) completeForOriginalTxData = true
@@ -240,7 +239,7 @@ export const downloadTxsDataAndCycles = async (
       await Receipt.processReceiptData(response.data.receipts)
       totalDownloadedReceipts += response.data.receipts.length
       startReceipt = endReceipt + 1
-      endReceipt += bucketSize
+      endReceipt += config.requestLimits.MAX_RECEIPTS_PER_REQUEST
       if (totalDownloadedReceipts >= totalReceiptsToSync) {
         completeForReceipt = true
         console.log('Download completed for receipts')
@@ -261,7 +260,7 @@ export const downloadTxsDataAndCycles = async (
       await OriginalTxData.processOriginalTxData(response.data.originalTxs)
       totalDownloadedOriginalTxsData += response.data.originalTxs.length
       startOriginalTxData = endOriginalTxData + 1
-      endOriginalTxData += bucketSize
+      endOriginalTxData += config.requestLimits.MAX_ORIGINAL_TXS_PER_REQUEST
       if (totalDownloadedOriginalTxsData >= totalOriginalTxsToSync) {
         completeForOriginalTxData = true
         console.log('Download completed for originalTxsData')
@@ -292,14 +291,14 @@ export const downloadTxsDataAndCycles = async (
         }
         combineCycles.push(cycleObj)
         // await Cycle.insertOrUpdateCycle(cycleObj);
-        if (combineCycles.length >= bucketSize || i === cycles.length - 1) {
+        if (combineCycles.length >= config.requestLimits.MAX_CYCLES_PER_REQUEST || i === cycles.length - 1) {
           await Cycle.bulkInsertCycles(combineCycles)
           combineCycles = []
         }
       }
       totalDownloadedCycles += response.data.cycleInfo.length
       startCycle = endCycle + 1
-      endCycle += bucketSize
+      endCycle += config.requestLimits.MAX_CYCLES_PER_REQUEST
       if (totalDownloadedCycles >= totalCyclesToSync) {
         completeForCycle = true
         console.log('Download completed for cycles')
@@ -315,9 +314,9 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
   let completeSyncingAccounts = false
   let completeSyncTransactions = false
   let startAccount = 0
-  let endAccount = startAccount + 10000
+  let endAccount = startAccount + config.requestLimits.MAX_ACCOUNTS_PER_REQUEST
   let startTransaction = 0
-  let endTransaction = startTransaction + 10000
+  let endTransaction = startTransaction + config.requestLimits.MAX_TRANSACTIONS_PER_REQUEST
   let combineTransactions = []
 
   let totalGenesisAccounts = 0
@@ -343,7 +342,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
       console.log(`Downloading accounts from ${startAccount} to ${endAccount}`)
       const response = await queryFromDistributor(DataType.ACCOUNT, { startCycle: 0, endCycle: 5, page })
       if (response && response.data && response.data.accounts) {
-        if (response.data.accounts.length < 10000) {
+        if (response.data.accounts.length < config.requestLimits.MAX_ACCOUNTS_PER_REQUEST) {
           completeSyncingAccounts = true
           console.log('Download completed for accounts')
         }
@@ -354,7 +353,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
         console.log('Genesis Account', 'Invalid download response')
       }
       startAccount = endAccount
-      endAccount += 10000
+      endAccount += config.requestLimits.MAX_ACCOUNTS_PER_REQUEST
       page++
       // await sleep(1000);
     }
@@ -374,7 +373,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
       console.log(`Downloading transactions from ${startTransaction} to ${endTransaction}`)
       const response = await queryFromDistributor(DataType.TRANSACTION, { startCycle: 0, endCycle: 5, page })
       if (response && response.data && response.data.transactions) {
-        if (response.data.transactions.length < 10000) {
+        if (response.data.transactions.length < config.requestLimits.MAX_TRANSACTIONS_PER_REQUEST) {
           completeSyncTransactions = true
           console.log('Download completed for transactions')
         }
@@ -384,7 +383,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
         console.log('Genesis Transaction Receipt', 'Invalid download response')
       }
       startTransaction = endTransaction
-      endTransaction += 10000
+      endTransaction += config.requestLimits.MAX_TRANSACTIONS_PER_REQUEST
       page++
     }
   }
@@ -551,8 +550,7 @@ export const downloadCyclcesBetweenCycles = async (
   totalCyclesToSync: number,
   saveOnlyNewData = false
 ): Promise<void> => {
-  const bucketSize = 1000
-  let endCycle = startCycle + bucketSize
+  let endCycle = startCycle + config.requestLimits.MAX_CYCLES_PER_REQUEST
   for (; startCycle <= totalCyclesToSync; ) {
     if (endCycle > totalCyclesToSync) endCycle = totalCyclesToSync
     const response = await queryFromDistributor(DataType.CYCLE, { start: startCycle, end: endCycle })
@@ -577,14 +575,14 @@ export const downloadCyclcesBetweenCycles = async (
           if (!existingCycle) combineCycles.push(cycleObj)
         } else combineCycles.push(cycleObj)
         // await Cycle.insertOrUpdateCycle(cycleObj);
-        if (combineCycles.length >= bucketSize || i === cycles.length - 1) {
+        if (combineCycles.length >= config.requestLimits.MAX_CYCLES_PER_REQUEST || i === cycles.length - 1) {
           if (combineCycles.length > 0) await Cycle.bulkInsertCycles(combineCycles)
           combineCycles = []
         }
       }
     }
     startCycle = endCycle + 1
-    endCycle += bucketSize
+    endCycle += config.requestLimits.MAX_CYCLES_PER_REQUEST
   }
   console.log('Download completed for cycles between counter', startCycle, 'and', endCycle)
 }
@@ -594,7 +592,7 @@ export const downloadReceiptsBetweenCycles = async (
   totalCyclesToSync: number,
   saveOnlyNewData = false
 ): Promise<void> => {
-  let endCycle = startCycle + 100
+  let endCycle = startCycle + config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST
   for (; startCycle <= totalCyclesToSync; ) {
     if (endCycle > totalCyclesToSync) endCycle = totalCyclesToSync
     console.log(`Downloading receipts from cycle ${startCycle} to cycle ${endCycle}`)
@@ -602,7 +600,7 @@ export const downloadReceiptsBetweenCycles = async (
     if (response && response.data && response.data.receipts) {
       console.log(`Download receipts Count`, response.data.receipts)
       const receiptsCount = response.data.receipts
-      for (let i = 1; i <= Math.ceil(receiptsCount / 100); i++) {
+      for (let i = 1; i <= Math.ceil(receiptsCount / config.requestLimits.MAX_RECEIPTS_PER_REQUEST); i++) {
         response = await queryFromDistributor(DataType.RECEIPT, { startCycle, endCycle, page: i })
         if (response && response.data && response.data.receipts) {
           console.log(`Downloaded receipts`, response.data.receipts.length)
@@ -615,7 +613,7 @@ export const downloadReceiptsBetweenCycles = async (
         console.log('Receipt', 'Invalid download response')
     }
     startCycle = endCycle + 1
-    endCycle += 100
+    endCycle += config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST
   }
 }
 
@@ -624,7 +622,7 @@ export const downloadOriginalTxsDataBetweenCycles = async (
   totalCyclesToSync: number,
   saveOnlyNewData = false
 ): Promise<void> => {
-  let endCycle = startCycle + 100
+  let endCycle = startCycle + config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST
   for (; startCycle <= totalCyclesToSync; ) {
     if (endCycle > totalCyclesToSync) endCycle = totalCyclesToSync
     console.log(`Downloading originalTxsData from cycle ${startCycle} to cycle ${endCycle}`)
@@ -632,7 +630,11 @@ export const downloadOriginalTxsDataBetweenCycles = async (
     if (response && response.data && response.data.originalTxs) {
       console.log(`Download originalTxsData Count`, response.data.originalTxs)
       const originalTxsDataCount = response.data.originalTxs
-      for (let i = 1; i <= Math.ceil(originalTxsDataCount / 100); i++) {
+      for (
+        let i = 1;
+        i <= Math.ceil(originalTxsDataCount / config.requestLimits.MAX_ORIGINAL_TXS_PER_REQUEST);
+        i++
+      ) {
         response = await queryFromDistributor(DataType.ORIGINALTX, { startCycle, endCycle, page: i })
         if (response && response.data && response.data.originalTxs) {
           console.log(`Downloaded originalTxsData`, response.data.originalTxs.length)
@@ -645,6 +647,6 @@ export const downloadOriginalTxsDataBetweenCycles = async (
         console.log('OriginalTxData', 'Invalid download response')
     }
     startCycle = endCycle + 1
-    endCycle += 100
+    endCycle += config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST
   }
 }

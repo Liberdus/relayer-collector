@@ -24,14 +24,7 @@ import { validateData } from './class/validateData'
 import { DistributorSocketCloseCodes } from './types'
 import { initDataLogWriter } from './class/DataLogWriter'
 // config variables
-import {
-  config as CONFIG,
-  DISTRIBUTOR_URL,
-  collectorMode,
-  config,
-  envEnum,
-  overrideDefaultConfig,
-} from './config'
+import { DISTRIBUTOR_URL, collectorMode, config, envEnum, overrideDefaultConfig } from './config'
 import { sleep } from './utils'
 import RMQCyclesConsumer from './collectors/rmq_cycles'
 import RMQOriginalTxsConsumer from './collectors/rmq_original_txs'
@@ -90,10 +83,10 @@ if (config.env == envEnum.DEV) {
 }
 
 export const startServer = async (): Promise<void> => {
-  console.log(`Collector Mode: ${CONFIG.collectorMode}`)
+  console.log(`Collector Mode: ${config.collectorMode}`)
   overrideDefaultConfig(env, args)
   // Set crypto hash keys from config
-  Crypto.setCryptoHashKey(CONFIG.hashKey)
+  Crypto.setCryptoHashKey(config.hashKey)
 
   await Storage.initializeDB()
   Storage.addExitListeners(ws)
@@ -196,13 +189,13 @@ export const startServer = async (): Promise<void> => {
     }
   }
 
-  if (CONFIG.dataLogWrite) await initDataLogWriter()
+  if (config.dataLogWrite) await initDataLogWriter()
 
   setupCollectorSocketServer();
 
   addSigListeners()
 
-  if (CONFIG.collectorMode === collectorMode.MQ) {
+  if (config.collectorMode === collectorMode.MQ) {
     startRMQEventsConsumers()
   } else {
     const CONNECT_TO_DISTRIBUTOR_MAX_RETRY = 10
@@ -282,9 +275,9 @@ export const startServer = async (): Promise<void> => {
 }
 
 const attemptReconnection = (): void => {
-  console.log(`Re-connecting Distributor in ${CONFIG.RECONNECT_INTERVAL_MS / 1000}s...`)
+  console.log(`Re-connecting Distributor in ${config.RECONNECT_INTERVAL_MS / 1000}s...`)
   reconnecting = true
-  setTimeout(connectToDistributor, CONFIG.RECONNECT_INTERVAL_MS)
+  setTimeout(connectToDistributor, config.RECONNECT_INTERVAL_MS)
 }
 
 const connectToDistributor = (): void => {
@@ -293,13 +286,13 @@ const connectToDistributor = (): void => {
     timestamp: Date.now(),
   }
   const queryString = encodeURIComponent(
-    StringUtils.safeStringify(Crypto.sign({ collectorInfo, sender: CONFIG.collectorInfo.publicKey }))
+    StringUtils.safeStringify(Crypto.sign({ collectorInfo, sender: config.collectorInfo.publicKey }))
   )
   const URL = `${DISTRIBUTOR_URL}?data=${queryString}`
   ws = new WebSocket(URL)
   ws.onopen = () => {
     console.log(
-      `✅ Socket connected to the Distributor @ ${CONFIG.distributorInfo.ip}:${CONFIG.distributorInfo.port}}`
+      `✅ Socket connected to the Distributor @ ${config.distributorInfo.ip}:${config.distributorInfo.port}}`
     )
     connected = true
     reconnecting = false
@@ -371,7 +364,7 @@ const addSigListeners = (): void => {
     console.log('DETECTED SIGUSR1 SIGNAL')
     // Reload the config.json
     overrideDefaultConfig(env, args)
-    console.log('Config reloaded', CONFIG)
+    console.log('Config reloaded', config)
   })
   console.log('Registerd signal listeners.')
 }

@@ -1,6 +1,6 @@
 import * as crypto from '@shardus/crypto-utils'
 import * as utils from '../utils'
-import { config as CONFIG } from '../config'
+import { config } from '../config'
 import { insertOrUpdateCycle } from '../storage/cycle'
 import { processReceiptData } from '../storage/receipt'
 import { processOriginalTxData } from '../storage/originalTxData'
@@ -33,7 +33,7 @@ export async function validateData(data: Data): Promise<boolean> {
   if (err) {
     return false
   }
-  if (data.sign.owner !== CONFIG.distributorInfo.publicKey) {
+  if (data.sign.owner !== config.distributorInfo.publicKey) {
     console.error('Data received from distributor has invalid key')
     return false
   }
