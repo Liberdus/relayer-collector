@@ -1,20 +1,9 @@
 import axios, { AxiosResponse } from 'axios'
 import * as crypto from '@shardus/crypto-utils'
-import * as Account from '../storage/account'
-import * as Transaction from '../storage/transaction'
-import * as Cycle from '../storage/cycle'
-import * as Receipt from '../storage/receipt'
-import * as OriginalTxData from '../storage/originalTxData'
+import { AccountDB, CycleDB, ReceiptDB, TransactionDB, OriginalTxDataDB } from '../storage'
 import { config, DISTRIBUTOR_URL } from '../config'
 import { Cycle as CycleType } from '../types'
 import { Utils as StringUtils } from '@shardus/types'
-
-export let needSyncing = false
-
-export const toggleNeedSyncing = (): void => {
-  needSyncing = !needSyncing
-  if (config.verbose) console.log('needSyncing', needSyncing)
-}
 
 export enum DataType {
   CYCLE = 'cycleinfo',
@@ -97,7 +86,7 @@ export async function compareWithOldReceiptsData(
       `Can't fetch receipts data from cycle ${startCycle} to cycle ${endCycle}  from distributor ${DISTRIBUTOR_URL}`
     )
   }
-  const oldReceiptCountByCycle = await Receipt.queryReceiptCountByCycles(startCycle, endCycle)
+  const oldReceiptCountByCycle = await ReceiptDB.queryReceiptCountByCycles(startCycle, endCycle)
   let success = false
   let matchedCycle = 0
   for (let i = 0; i < downloadedReceiptCountByCycles.length; i++) {
@@ -134,7 +123,7 @@ export async function compareWithOldOriginalTxsData(
       `Can't fetch originalTxsData data from cycle ${startCycle} to cycle ${endCycle}  from distributor ${DISTRIBUTOR_URL}`
     )
   }
-  const oldOriginalTxDataCountByCycle = await OriginalTxData.queryOriginalTxDataCountByCycles(
+  const oldOriginalTxDataCountByCycle = await OriginalTxDataDB.queryOriginalTxDataCountByCycles(
     startCycle,
     endCycle
   )
@@ -182,7 +171,7 @@ export const compareWithOldCyclesData = async (
       } to cycle ${lastCycleCounter}  from distributor server`
     )
   }
-  const oldCycles = await Cycle.queryCycleRecordsBetween(
+  const oldCycles = await CycleDB.queryCycleRecordsBetween(
     lastCycleCounter - numberOfCyclesTocompare,
     lastCycleCounter + 1
   )
@@ -236,7 +225,7 @@ export const downloadTxsDataAndCycles = async (
     const response = await queryFromDistributor(DataType.RECEIPT, { start: startReceipt, end: endReceipt })
     if (response && response.data && response.data.receipts) {
       console.log(`Downloaded receipts`, response.data.receipts.length)
-      await Receipt.processReceiptData(response.data.receipts)
+      await ReceiptDB.processReceiptData(response.data.receipts)
       totalDownloadedReceipts += response.data.receipts.length
       startReceipt = endReceipt + 1
       endReceipt += config.requestLimits.MAX_RECEIPTS_PER_REQUEST
@@ -257,7 +246,7 @@ export const downloadTxsDataAndCycles = async (
     })
     if (response && response.data && response.data.originalTxs) {
       console.log(`Downloaded originalTxsData`, response.data.originalTxs.length)
-      await OriginalTxData.processOriginalTxData(response.data.originalTxs)
+      await OriginalTxDataDB.processOriginalTxData(response.data.originalTxs)
       totalDownloadedOriginalTxsData += response.data.originalTxs.length
       startOriginalTxData = endOriginalTxData + 1
       endOriginalTxData += config.requestLimits.MAX_ORIGINAL_TXS_PER_REQUEST
@@ -292,7 +281,7 @@ export const downloadTxsDataAndCycles = async (
         combineCycles.push(cycleObj)
         // await Cycle.insertOrUpdateCycle(cycleObj);
         if (combineCycles.length >= config.requestLimits.MAX_CYCLES_PER_REQUEST || i === cycles.length - 1) {
-          await Cycle.bulkInsertCycles(combineCycles)
+          await CycleDB.bulkInsertCycles(combineCycles)
           combineCycles = []
         }
       }
@@ -321,8 +310,8 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
 
   let totalGenesisAccounts = 0
   let totalGenesisTransactionReceipts = 0
-  const totalExistingGenesisAccounts = await Account.queryAccountCount(0, 5)
-  const totalExistingGenesisTransactionReceipts = await Transaction.queryTransactionCount(null, null, 0, 5)
+  const totalExistingGenesisAccounts = await AccountDB.queryAccountCount(0, 5)
+  const totalExistingGenesisTransactionReceipts = await TransactionDB.queryTransactionCount(null, null, 0, 5)
   if (totalExistingGenesisAccounts > 0 && totalExistingGenesisTransactionReceipts > 0) {
     // Let's assume it has synced data for now, update to sync account count between them
     return
@@ -347,7 +336,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
           console.log('Download completed for accounts')
         }
         console.log(`Downloaded accounts`, response.data.accounts.length)
-        const transactions = await Account.processAccountData(response.data.accounts)
+        const transactions = await AccountDB.processAccountData(response.data.accounts)
         combineTransactions = [...combineTransactions, ...transactions]
       } else {
         console.log('Genesis Account', 'Invalid download response')
@@ -357,7 +346,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
       page++
       // await sleep(1000);
     }
-    await Transaction.processTransactionData(combineTransactions)
+    await TransactionDB.processTransactionData(combineTransactions)
   }
   if (totalExistingGenesisTransactionReceipts === 0) {
     const res = await queryFromDistributor(DataType.TRANSACTION, { startCycle: 0, endCycle: 5 })
@@ -378,7 +367,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
           console.log('Download completed for transactions')
         }
         console.log(`Downloaded transactions`, response.data.transactions.length)
-        await Transaction.processTransactionData(response.data.transactions)
+        await TransactionDB.processTransactionData(response.data.transactions)
       } else {
         console.log('Genesis Transaction Receipt', 'Invalid download response')
       }
@@ -407,7 +396,7 @@ export async function compareReceiptsCountByCycles(
     )
     return
   }
-  const existingReceiptCountByCycle = await Receipt.queryReceiptCountByCycles(startCycle, endCycle)
+  const existingReceiptCountByCycle = await ReceiptDB.queryReceiptCountByCycles(startCycle, endCycle)
   if (config.verbose) console.log('downloadedReceiptCountByCycle', downloadedReceiptCountByCycle)
   if (config.verbose) console.log('existingReceiptCountByCycle', existingReceiptCountByCycle)
   for (const downloadedReceipt of downloadedReceiptCountByCycle) {
@@ -441,7 +430,7 @@ export async function compareOriginalTxsCountByCycles(
     )
     return
   }
-  const existingOriginalTxDataCountByCycle = await OriginalTxData.queryOriginalTxDataCountByCycles(
+  const existingOriginalTxDataCountByCycle = await OriginalTxDataDB.queryOriginalTxDataCountByCycles(
     startCycle,
     endCycle
   )
@@ -480,7 +469,7 @@ export async function downloadReceiptsByCycle(
         const downloadedReceipts = response.data.receipts
         if (downloadedReceipts.length > 0) {
           totalDownloadedReceipts += downloadedReceipts.length
-          await Receipt.processReceiptData(downloadedReceipts)
+          await ReceiptDB.processReceiptData(downloadedReceipts)
         } else {
           console.log(
             `Got 0 receipts when querying for page ${page} of cycle ${cycle} from distributor ${DISTRIBUTOR_URL}`
@@ -521,7 +510,7 @@ export async function downloadOriginalTxsDataByCycle(
         const downloadedOriginalTxsData = response.data.originalTxs
         if (downloadedOriginalTxsData.length > 0) {
           totalDownloadOriginalTxsData += downloadedOriginalTxsData.length
-          await OriginalTxData.processOriginalTxData(downloadedOriginalTxsData)
+          await OriginalTxDataDB.processOriginalTxData(downloadedOriginalTxsData)
         } else {
           console.log(
             `Got 0 originalTxData when querying for page ${page} of cycle ${cycle} from distributor ${DISTRIBUTOR_URL}`
@@ -571,12 +560,12 @@ export const downloadCyclcesBetweenCycles = async (
           cycleMarker: cycle.marker,
         }
         if (saveOnlyNewData) {
-          const existingCycle = await Cycle.queryCycleByCounter(cycleObj.counter)
+          const existingCycle = await CycleDB.queryCycleByCounter(cycleObj.counter)
           if (!existingCycle) combineCycles.push(cycleObj)
         } else combineCycles.push(cycleObj)
         // await Cycle.insertOrUpdateCycle(cycleObj);
         if (combineCycles.length >= config.requestLimits.MAX_CYCLES_PER_REQUEST || i === cycles.length - 1) {
-          if (combineCycles.length > 0) await Cycle.bulkInsertCycles(combineCycles)
+          if (combineCycles.length > 0) await CycleDB.bulkInsertCycles(combineCycles)
           combineCycles = []
         }
       }
@@ -605,7 +594,7 @@ export const downloadReceiptsBetweenCycles = async (
         if (response && response.data && response.data.receipts) {
           console.log(`Downloaded receipts`, response.data.receipts.length)
           const receipts = response.data.receipts
-          await Receipt.processReceiptData(receipts, saveOnlyNewData)
+          await ReceiptDB.processReceiptData(receipts, saveOnlyNewData)
         }
       }
     } else {
@@ -639,7 +628,7 @@ export const downloadOriginalTxsDataBetweenCycles = async (
         if (response && response.data && response.data.originalTxs) {
           console.log(`Downloaded originalTxsData`, response.data.originalTxs.length)
           const originalTxsData = response.data.originalTxs
-          await OriginalTxData.processOriginalTxData(originalTxsData, saveOnlyNewData)
+          await OriginalTxDataDB.processOriginalTxData(originalTxsData, saveOnlyNewData)
         }
       }
     } else {

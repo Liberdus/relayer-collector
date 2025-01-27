@@ -1,6 +1,6 @@
 import * as amqp from 'amqplib'
-import RMQConsumer from '../messaging/rabbitmq/consumer'
-import { validateData } from '../class/validateData'
+import RMQConsumer from '../../messaging/rabbitmq/consumer'
+import { validateData } from '../../class/validateData'
 import { Utils as StringUtils } from '@shardus/types'
 
 export default class RMQCyclesConsumer {

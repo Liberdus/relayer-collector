@@ -47,17 +47,18 @@ export async function validateData(data: Data): Promise<boolean> {
   }
 
   if (data.receipt) {
-    ReceiptLogWriter.writeToLog(`${StringUtils.safeStringify(data.receipt)}\n`)
+    if (config.dataLogWrite) ReceiptLogWriter.writeToLog(`${StringUtils.safeStringify(data.receipt)}\n`)
     await processReceiptData([data.receipt])
     return true
   }
   if (data.cycle) {
-    CycleLogWriter.writeToLog(`${StringUtils.safeStringify(data.cycle)}\n`)
+    if (config.dataLogWrite) CycleLogWriter.writeToLog(`${StringUtils.safeStringify(data.cycle)}\n`)
     await insertOrUpdateCycle(data.cycle)
     return true
   }
   if (data.originalTx) {
-    OriginalTxDataLogWriter.writeToLog(`${StringUtils.safeStringify(data.originalTx)}\n`)
+    if (config.dataLogWrite)
+      OriginalTxDataLogWriter.writeToLog(`${StringUtils.safeStringify(data.originalTx)}\n`)
     await processOriginalTxData([data.originalTx])
     return true
   }
