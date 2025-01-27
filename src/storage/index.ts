@@ -3,6 +3,12 @@ import { Database } from 'sqlite3'
 import { config } from '../config'
 import { createDB, runCreate, close } from './sqlite3storage'
 import { createDirectories } from '../utils'
+import * as AccountDB from './account'
+import * as CycleDB from './cycle'
+import * as ReceiptDB from './receipt'
+import * as TransactionDB from './transaction'
+import * as OriginalTxDataDB from './originalTxData'
+import * as AccountHistoryStateDB from './accountHistoryState'
 
 export let cycleDatabase: Database
 export let accountDatabase: Database
@@ -136,7 +142,7 @@ export const closeDatabase = async (): Promise<void> => {
   await Promise.all(promises)
 }
 
-export const addExitListeners = (ws?: WebSocket) => {
+export const addExitListeners = (ws?: WebSocket): void => {
   process.on('SIGINT', async () => {
     console.log('Exiting on SIGINT')
     if (ws) ws.close()
@@ -150,3 +156,5 @@ export const addExitListeners = (ws?: WebSocket) => {
     process.exit(0)
   })
 }
+
+export { AccountDB, CycleDB, ReceiptDB, TransactionDB, OriginalTxDataDB, AccountHistoryStateDB }

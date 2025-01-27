@@ -17,7 +17,6 @@ export enum collectorMode {
 export interface Config {
   env: string
   host: string
-  dbPath: string
   dataLogWrite: boolean
   dataLogWriter: {
     dirName: string
@@ -54,7 +53,8 @@ export interface Config {
   rateLimit: number
   patchData: boolean
   USAGE_ENDPOINTS_KEY: string
-  RECONNECT_INTERVAL_MS: number
+  DISTRIBUTOR_RECONNECT_INTERVAL: number
+  CONNECT_TO_DISTRIBUTOR_MAX_RETRY: number
   processData: {
     indexReceipt: boolean
     indexOriginalTxData: boolean
@@ -76,7 +76,6 @@ export interface Config {
 let config: Config = {
   env: process.env.SHARDEUM_COLLECTOR_MODE || envEnum.PROD, //default safe if env is not set
   host: process.env.HOST || '127.0.0.1',
-  dbPath: process.env.COLLECTOR_DB_PATH || 'db.sqlite3',
   dataLogWrite: false,
   dataLogWriter: {
     dirName: 'data-logs',
@@ -113,12 +112,13 @@ let config: Config = {
   rateLimit: 100,
   patchData: false,
   USAGE_ENDPOINTS_KEY: '',
-  RECONNECT_INTERVAL_MS: 10_000,
   processData: {
     indexReceipt: true,
     indexOriginalTxData: true,
   },
   saveAccountHistoryState: true,
+  DISTRIBUTOR_RECONNECT_INTERVAL: 10_000,
+  CONNECT_TO_DISTRIBUTOR_MAX_RETRY: 10,
   collectorMode: process.env.COLLECTOR_MODE || collectorMode.WS.toString(),
   storeReceiptBeforeStates: true,
   requestLimits: {

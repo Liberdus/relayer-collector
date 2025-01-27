@@ -48,9 +48,13 @@ export async function runCreate(db: Database, createStatement: string): Promise<
   await run(db, createStatement)
 }
 
-export async function run(db: Database, sql: string, params: unknown[] | {} = []): Promise<unknown> {
+export async function run(
+  db: Database,
+  sql: string,
+  params: unknown[] | object = []
+): Promise<{ id: number }> {
   return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
+    db.run(sql, params, function (err: Error) {
       if (err) {
         console.log('Error running sql ' + sql)
         console.log(err)
@@ -62,9 +66,9 @@ export async function run(db: Database, sql: string, params: unknown[] | {} = []
   })
 }
 
-export async function get(db: Database, sql: string, params = []): Promise<unknown> {
+export async function get<T>(db: Database, sql: string, params = []): Promise<T> {
   return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, result) => {
+    db.get(sql, params, (err: Error, result: T) => {
       if (err) {
         console.log('Error running sql: ' + sql)
         console.log(err)
@@ -76,9 +80,9 @@ export async function get(db: Database, sql: string, params = []): Promise<unkno
   })
 }
 
-export async function all(db: Database, sql: string, params = []): Promise<unknown[]> {
+export async function all<T>(db: Database, sql: string, params = []): Promise<T[]> {
   return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
+    db.all(sql, params, (err: Error, rows: T[]) => {
       if (err) {
         console.log('Error running sql: ' + sql)
         console.log(err)
@@ -90,27 +94,26 @@ export async function all(db: Database, sql: string, params = []): Promise<unkno
   })
 }
 
-export function extractValues(object: object): unknown[] {
+export function extractValues(object: object): string[] {
   try {
-    const inputs = []
-    for (const column of Object.keys(object)) {
-      let value = object[column] // eslint-disable-line security/detect-object-injection
+    const inputs: string[] = []
+    for (let value of Object.values(object)) {
       if (typeof value === 'object') value = StringUtils.safeStringify(value)
       inputs.push(value)
     }
     return inputs
   } catch (e) {
     console.log(e)
-    return null
   }
+
+  return []
 }
 
-export function extractValuesFromArray(arr: object[]): unknown[] {
+export function extractValuesFromArray(arr: object[]): string[] {
   try {
-    const inputs = []
+    const inputs: string[] = []
     for (const object of arr) {
-      for (const column of Object.keys(object)) {
-        let value = object[column] // eslint-disable-line security/detect-object-injection
+      for (let value of Object.values(object)) {
         if (typeof value === 'object') value = StringUtils.safeStringify(value)
         inputs.push(value)
       }
@@ -118,11 +121,11 @@ export function extractValuesFromArray(arr: object[]): unknown[] {
     return inputs
   } catch (e) {
     console.log(e)
-    return null
+    return []
   }
 }
 
-export function updateSqlStatementClause(sql: string, inputs: any[],): string {
+export function updateSqlStatementClause(sql: string, inputs: any[]): string {
   if (inputs.length > 0) sql += ' AND '
   else sql += ' WHERE '
   return sql

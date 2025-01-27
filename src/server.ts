@@ -7,11 +7,7 @@ import * as crypto from '@shardus/crypto-utils'
 import Fastify, { FastifyRequest } from 'fastify'
 import * as usage from './middleware/usage'
 import * as Storage from './storage'
-import * as AccountDB from './storage/account'
-import * as CycleDB from './storage/cycle'
-import * as ReceiptDB from './storage/receipt'
-import * as TransactionDB from './storage/transaction'
-import * as OriginalTxDataDB from './storage/originalTxData'
+import { AccountDB, CycleDB, ReceiptDB, TransactionDB, OriginalTxDataDB } from './storage'
 import { Account, AccountSearchType, OriginalTxResponse, Transaction, TransactionSearchType } from './types'
 // config variables
 import { AccountResponse, ReceiptResponse, TransactionResponse } from './types'
@@ -782,7 +778,7 @@ const start = async (): Promise<void> => {
 
     res.totalCycles = await CycleDB.queryCycleCount()
     if (config.processData.indexReceipt) {
-      res.totalAccounts = await AccountDB.queryAccountCount(AccountSearchType.All)
+      res.totalAccounts = await AccountDB.queryAccountCount()
       res.totalTransactions = await TransactionDB.queryTransactionCount()
     }
     res.totalReceipts = await ReceiptDB.queryReceiptCount()
