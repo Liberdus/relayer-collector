@@ -1,5 +1,6 @@
 // require("dotenv").config();
-
+import path from 'path'
+import fs from 'fs'
 import fastifyCors from '@fastify/cors'
 import fastifyRateLimit from '@fastify/rate-limit'
 import FastifyWebsocket from '@fastify/websocket'
@@ -8,14 +9,19 @@ import Fastify, { FastifyRequest } from 'fastify'
 import * as usage from './middleware/usage'
 import * as Storage from './storage'
 import { AccountDB, CycleDB, ReceiptDB, TransactionDB, OriginalTxDataDB } from './storage'
-import { Account, AccountSearchType, OriginalTxResponse, Transaction, TransactionSearchType } from './types'
-// config variables
+import {
+  Account,
+  AccountSearchType,
+  OriginalTxResponse,
+  Transaction,
+  TransactionSearchParams,
+  TransactionSearchType,
+  TransactionType,
+} from './types'
 import { AccountResponse, ReceiptResponse, TransactionResponse } from './types'
 import * as utils from './utils'
 // config variables
 import { config, envEnum } from './config'
-import path from 'path'
-import fs from 'fs'
 import { Utils as StringUtils } from '@shardus/types'
 import { healthCheckRouter } from './routes/healthCheck'
 
@@ -55,23 +61,27 @@ if (port) {
 }
 console.log('Port', config.port.server)
 
-// commented interface b/c it was never used; caused linting error
-/*
-interface RequestParams {
-  counter: string
+export const addExitListeners = (): void => {
+  process.on('SIGINT', async () => {
+    console.log('Exiting on SIGINT')
+    await Storage.closeDatabase()
+    process.exit(0)
+  })
+  process.on('SIGTERM', async () => {
+    console.log('Exiting on SIGTERM')
+    await Storage.closeDatabase()
+    process.exit(0)
+  })
 }
-*/
 
-// Setup Log Directory
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
-  Storage.addExitListeners()
+  addExitListeners()
 
   const server = Fastify({
     logger: config.fastifyDebugLog,
   })
 
-  await server.register(FastifyWebsocket)
   await server.register(fastifyCors)
   await server.register(fastifyRateLimit, {
     max: config.rateLimit,
@@ -136,7 +146,7 @@ const start = async (): Promise<void> => {
     }
     let cycles = []
     if (query.count) {
-      let count: number = parseInt(query.count)
+      const count: number = parseInt(query.count)
       if (count <= 0 || Number.isNaN(count)) {
         reply.send({ success: false, error: 'Invalid count' })
         return
@@ -314,7 +324,7 @@ const start = async (): Promise<void> => {
       res.totalPages = totalPages
     }
     if (totalAccounts > 0) {
-      if ((page = 0)) page = 1
+      if ((page === 0)) page = 1
       res.accounts = await AccountDB.queryAccounts(
         (page - 1) * itemsPerPage,
         itemsPerPage,
@@ -391,7 +401,7 @@ const start = async (): Promise<void> => {
     if (query.txSearchType) {
       txSearchType = query.txSearchType as TransactionSearchType
       // Check if the parsed value is a valid enum value
-      if (!Object.values(TransactionSearchType).includes(txSearchType)) {
+      if (!TransactionType[txSearchType] || TransactionSearchParams[txSearchType]) {
         reply.send({ success: false, error: 'Invalid transaction search type' })
         return
       }
@@ -500,6 +510,7 @@ const start = async (): Promise<void> => {
       txId: string
       startCycle: string
       endCycle: string
+      tally: string
     }
   }>
 
@@ -510,6 +521,7 @@ const start = async (): Promise<void> => {
       txId: 's?',
       startCycle: 's?',
       endCycle: 's?',
+      tally: 's?',
     })
     if (err) {
       reply.send({ success: false, error: err })
@@ -518,7 +530,7 @@ const start = async (): Promise<void> => {
     /* prettier-ignore */ if (config.verbose) console.log('Request', _request.query);
     const query = _request.query
     // Check at least one of the query parameters is present
-    if (!query.count && !query.txId && !query.startCycle && !query.endCycle) {
+    if (!query.count && !query.txId && !query.startCycle && !query.endCycle && !query.tally) {
       reply.send({
         success: false,
         reason: 'Not specified which receipt to query',
@@ -585,6 +597,11 @@ const start = async (): Promise<void> => {
         }
       }
     }
+    if (query.tally === 'true') {
+      const totalReceipts = await ReceiptDB.queryReceiptCountByCycles(startCycle, endCycle)
+      reply.send({ success: true, totalReceipts })
+      return
+    }
     if (query.page) {
       page = parseInt(query.page)
       if (page <= 1 || Number.isNaN(page)) {
@@ -626,6 +643,7 @@ const start = async (): Promise<void> => {
       accountId: string
       startCycle: string
       endCycle: string
+      tally: string
     }
   }>
 
@@ -637,6 +655,7 @@ const start = async (): Promise<void> => {
       accountId: 's?',
       startCycle: 's?',
       endCycle: 's?',
+      tally: 's?',
     })
     if (err) {
       reply.send({ success: false, error: err })
@@ -651,7 +670,8 @@ const start = async (): Promise<void> => {
       !query.txId &&
       !query.accountId &&
       !query.startCycle &&
-      !query.endCycle
+      !query.endCycle &&
+      !query.tally
     ) {
       reply.send({
         success: false,
@@ -726,6 +746,11 @@ const start = async (): Promise<void> => {
           return
         }
       }
+    }
+    if (query.tally === 'true') {
+      const totalOriginalTxs = await OriginalTxDataDB.queryOriginalTxDataCountByCycles(startCycle, endCycle)
+      reply.send({ success: true, totalOriginalTxs })
+      return
     }
     if (query.page) {
       page = parseInt(query.page)

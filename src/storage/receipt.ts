@@ -62,7 +62,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
     if (receiptsMap.has(tx.txId) && receiptsMap.get(tx.txId) === timestamp) {
       continue
     }
-    let modifiedReceiptObj = {
+    const modifiedReceiptObj = {
       ...receiptObj,
       beforeStates: config.storeReceiptBeforeStates ? receiptObj.beforeStates : [],
     }
@@ -70,7 +70,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       const receiptExist = await queryReceiptByReceiptId(tx.txId)
       if (!receiptExist) combineReceipts.push(modifiedReceiptObj as unknown as Receipt)
     } else combineReceipts.push(modifiedReceiptObj as unknown as Receipt)
-    let txReceipt = appReceiptData
+    const txReceipt = appReceiptData
     receiptsMap.set(tx.txId, tx.timestamp)
 
 
@@ -134,7 +134,6 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
     } as Transaction
 
     if (txReceipt) {
-      console.log('txReceipt', txReceipt)
       txObj.transactionType = txReceipt.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
       txObj.txFrom = txReceipt.from // be sure to update with the correct field of the tx sender
       txObj.txTo = txReceipt.to // be sure to update with the correct field of the tx recipient

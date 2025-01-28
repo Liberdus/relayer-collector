@@ -1,10 +1,12 @@
 import * as dotenv from 'dotenv'
 dotenv.config()
+import path = require('path')
+import fs = require('fs')
 import WebSocket from 'ws'
 import { Utils as StringUtils } from '@shardus/types'
 import * as Storage from './storage'
 import * as Crypto from './utils/crypto'
-import { AccountDB, CycleDB, ReceiptDB, TransactionDB, OriginalTxDataDB } from './storage'
+import { CycleDB, ReceiptDB, OriginalTxDataDB } from './storage'
 import {
   downloadTxsDataAndCycles,
   compareWithOldReceiptsData,
@@ -33,10 +35,6 @@ let connected = false
 
 const env = process.env
 const args = process.argv
-
-import path = require('path')
-import fs = require('fs')
-import { setupCollectorSocketServer } from './collectorServer'
 
 if (config.env == envEnum.DEV) {
   //default debug mode keys
@@ -343,6 +341,21 @@ const addSigListeners = (): void => {
   console.log('Registerd signal listeners.')
 }
 
+export const addExitListeners = (ws: WebSocket): void => {
+  process.on('SIGINT', async () => {
+    console.log('Exiting on SIGINT')
+    ws.close()
+    await Storage.closeDatabase()
+    process.exit(0)
+  })
+  process.on('SIGTERM', async () => {
+    console.log('Exiting on SIGTERM')
+    ws.close()
+    await Storage.closeDatabase()
+    process.exit(0)
+  })
+}
+
 const startServer = async (): Promise<void> => {
   console.log(`Collector Mode: ${config.collectorMode}`)
   overrideDefaultConfig(env, args)
@@ -350,7 +363,7 @@ const startServer = async (): Promise<void> => {
   Crypto.setCryptoHashKey(config.hashKey)
 
   await Storage.initializeDB()
-  Storage.addExitListeners(ws)
+  addExitListeners(ws)
 
   const syncData = await checkAndSyncData()
   if (config.dataLogWrite) await initDataLogWriter()
