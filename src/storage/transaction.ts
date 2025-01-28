@@ -2,7 +2,7 @@ import * as db from './sqlite3storage'
 import { transactionDatabase } from '.'
 import { config } from '../config/index'
 import { Utils as StringUtils } from '@shardus/types'
-import { Transaction, TransactionType, TransactionSearchType } from '../types'
+import { Transaction, TransactionType, TransactionSearchType, TransactionSearchParams } from '../types'
 
 type DbTransaction = Transaction & {
   data: string
@@ -105,9 +105,13 @@ export async function queryTransactionCount(
       values.push(accountId, accountId)
     }
     if (txType) {
-      sql = db.updateSqlStatementClause(sql, values)
-      sql += `transactionType=?`
-      values.push(txType)
+      if (txType === TransactionSearchParams.all) {
+        // do nothing
+      } else {
+        sql = db.updateSqlStatementClause(sql, values)
+        sql += `transactionType=?`
+        values.push(txType)
+      }
     }
     if (startCycleNumber || endCycleNumber) {
       sql = db.updateSqlStatementClause(sql, values)
@@ -148,9 +152,13 @@ export async function queryTransactions(
       values.push(accountId, accountId)
     }
     if (txType) {
-      sql = db.updateSqlStatementClause(sql, values)
-      sql += `transactionType=?`
-      values.push(txType)
+      if (txType === TransactionSearchParams.all) {
+        // do nothing
+      } else {
+        sql = db.updateSqlStatementClause(sql, values)
+        sql += `transactionType=?`
+        values.push(txType)
+      }
     }
     if (startCycleNumber || endCycleNumber) {
       sql = db.updateSqlStatementClause(sql, values)
@@ -224,8 +232,12 @@ export async function queryTransactionCountByCycles(
     let sql = `SELECT cycle, COUNT(*) FROM transactions`
     const values: unknown[] = []
     if (txType) {
-      sql += ` WHERE transactionType=?`
-      values.push(txType)
+      if (txType === TransactionSearchParams.all) {
+        // do nothing
+      } else {
+        sql += ` WHERE transactionType=?`
+        values.push(txType)
+      }
     }
     sql += ` GROUP BY cycle HAVING cycle BETWEEN ? AND ? ORDER BY cycle ASC`
     values.push(start, end)

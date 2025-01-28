@@ -142,19 +142,4 @@ export const closeDatabase = async (): Promise<void> => {
   await Promise.all(promises)
 }
 
-export const addExitListeners = (ws?: WebSocket): void => {
-  process.on('SIGINT', async () => {
-    console.log('Exiting on SIGINT')
-    if (ws) ws.close()
-    await closeDatabase()
-    process.exit(0)
-  })
-  process.on('SIGTERM', async () => {
-    console.log('Exiting on SIGTERM')
-    if (ws) ws.close()
-    await closeDatabase()
-    process.exit(0)
-  })
-}
-
 export { AccountDB, CycleDB, ReceiptDB, TransactionDB, OriginalTxDataDB, AccountHistoryStateDB }
