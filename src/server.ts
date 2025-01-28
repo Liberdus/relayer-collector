@@ -245,7 +245,6 @@ const start = async (): Promise<void> => {
       accounts: [] as Account[],
     }
     if (query.accountSearchType) {
-      accountSearchType = parseInt(query.accountSearchType)
       // Check if the parsed value is a valid enum value
       if (!Object.values(AccountSearchType).includes(accountSearchType)) {
         reply.send({ success: false, error: 'Invalid account search type' })
