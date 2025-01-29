@@ -341,16 +341,17 @@ const addSigListeners = (): void => {
   console.log('Registerd signal listeners.')
 }
 
-export const addExitListeners = (ws: WebSocket): void => {
+export const addExitListeners = (): void => {
+  console.log('Registerd exit listeners.')
   process.on('SIGINT', async () => {
     console.log('Exiting on SIGINT')
-    ws.close()
+    ws?.close()
     await Storage.closeDatabase()
     process.exit(0)
   })
   process.on('SIGTERM', async () => {
     console.log('Exiting on SIGTERM')
-    ws.close()
+    ws?.close()
     await Storage.closeDatabase()
     process.exit(0)
   })
@@ -363,7 +364,7 @@ const startServer = async (): Promise<void> => {
   Crypto.setCryptoHashKey(config.hashKey)
 
   await Storage.initializeDB()
-  addExitListeners(ws)
+  addExitListeners()
 
   const syncData = await checkAndSyncData()
   if (config.dataLogWrite) await initDataLogWriter()

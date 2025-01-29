@@ -23,7 +23,9 @@ export enum AccountType {
   UserAccount = 'UserAccount',
 }
 
-export enum AccountSearchType {
+export enum AccountSearchParams {
   'all', // All Accounts Type
   // e.g 'UserAndNodeAccounts' for User and Node Accounts
 }
+
+export type AccountSearchType = AccountType | AccountSearchParams

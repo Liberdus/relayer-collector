@@ -1,4 +1,3 @@
-import WebSocket from 'ws'
 import { Database } from 'sqlite3'
 import { config } from '../config'
 import { createDB, runCreate, close } from './sqlite3storage'
