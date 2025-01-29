@@ -68,7 +68,7 @@ export async function processTransactionData(transactions: Transaction[]): Promi
     const txFrom = transaction.data.from // be sure to update with the correct field of the tx sender
     const txTo = transaction.data.to // be sure to update with the correct field of the tx recipient
     const txObj: Transaction = {
-      txId: transaction.data?.txId,
+      txId: transaction.txId || transaction.data?.txId,
       cycleNumber: transaction.cycleNumber,
       timestamp: transaction.timestamp,
       appReceiptId: transaction.appReceiptId,
@@ -207,7 +207,7 @@ export async function queryTransactionByTxId(txId: string): Promise<Transaction 
 
 export async function queryTransactionByAppReceiptId(appReceiptId: string): Promise<Transaction[] | null> {
   try {
-    const sql = `SELECT * FROM transactions WHERE appReceiptId=? ORDER BY cycle DESC, timestamp DESC`
+    const sql = `SELECT * FROM transactions WHERE appReceiptId=? ORDER BY cycleNumber DESC, timestamp DESC`
     const transactions = (await db.all(transactionDatabase, sql, [appReceiptId])) as DbTransaction[]
     if (transactions.length > 0) {
       for (const transaction of transactions) {
@@ -227,9 +227,9 @@ export async function queryTransactionCountByCycles(
   end: number,
   txType?: TransactionSearchType
 ): Promise<{ cycle: number; transactions: number }[]> {
-  let transactions: { cycle: number; 'COUNT(*)': number }[] = []
+  let transactions: { cycleNumber: number; 'COUNT(*)': number }[] = []
   try {
-    let sql = `SELECT cycle, COUNT(*) FROM transactions`
+    let sql = `SELECT cycleNumber, COUNT(*) FROM transactions`
     const values: unknown[] = []
     if (txType) {
       if (txType === TransactionSearchParams.all) {
@@ -239,18 +239,21 @@ export async function queryTransactionCountByCycles(
         values.push(txType)
       }
     }
-    sql += ` GROUP BY cycle HAVING cycle BETWEEN ? AND ? ORDER BY cycle ASC`
+    sql += ` GROUP BY cycleNumber HAVING cycleNumber BETWEEN ? AND ? ORDER BY cycleNumber ASC`
     values.push(start, end)
-    transactions = (await db.all(transactionDatabase, sql, values)) as { cycle: number; 'COUNT(*)': number }[]
+    transactions = (await db.all(transactionDatabase, sql, values)) as {
+      cycleNumber: number
+      'COUNT(*)': number
+    }[]
   } catch (e) {
     console.log(e)
   }
   if (config.verbose) console.log('Transaction count by cycles', transactions)
 
-  return transactions.map((receipt) => {
+  return transactions.map((transaction) => {
     return {
-      cycle: receipt.cycle,
-      transactions: receipt['COUNT(*)'],
+      cycle: transaction.cycleNumber,
+      transactions: transaction['COUNT(*)'],
     }
   })
 }

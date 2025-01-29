@@ -3,7 +3,6 @@ import path from 'path'
 import fs from 'fs'
 import fastifyCors from '@fastify/cors'
 import fastifyRateLimit from '@fastify/rate-limit'
-import FastifyWebsocket from '@fastify/websocket'
 import * as crypto from '@shardus/crypto-utils'
 import Fastify, { FastifyRequest } from 'fastify'
 import * as usage from './middleware/usage'
@@ -11,7 +10,9 @@ import * as Storage from './storage'
 import { AccountDB, CycleDB, ReceiptDB, TransactionDB, OriginalTxDataDB } from './storage'
 import {
   Account,
+  AccountSearchParams,
   AccountSearchType,
+  AccountType,
   OriginalTxResponse,
   Transaction,
   TransactionSearchParams,
@@ -245,8 +246,11 @@ const start = async (): Promise<void> => {
       accounts: [] as Account[],
     }
     if (query.accountSearchType) {
-      // Check if the parsed value is a valid enum value
-      if (!Object.values(AccountSearchType).includes(accountSearchType)) {
+      accountSearchType = query.accountSearchType
+      if (
+        typeof AccountType[query.accountSearchType] === 'undefined' &&
+        typeof AccountSearchParams[query.accountSearchType] === 'undefined'
+      ) {
         reply.send({ success: false, error: 'Invalid account search type' })
         return
       }
@@ -303,7 +307,7 @@ const start = async (): Promise<void> => {
     }
     if (query.page) {
       page = parseInt(query.page)
-      if (page <= 1 || Number.isNaN(page)) {
+      if (page < 1 || Number.isNaN(page)) {
         reply.send({ success: false, error: 'Invalid page number' })
         return
       }
@@ -323,7 +327,7 @@ const start = async (): Promise<void> => {
       res.totalPages = totalPages
     }
     if (totalAccounts > 0) {
-      if ((page === 0)) page = 1
+      if (page === 0) page = 1
       res.accounts = await AccountDB.queryAccounts(
         (page - 1) * itemsPerPage,
         itemsPerPage,
@@ -399,8 +403,10 @@ const start = async (): Promise<void> => {
     }
     if (query.txSearchType) {
       txSearchType = query.txSearchType as TransactionSearchType
-      // Check if the parsed value is a valid enum value
-      if (!TransactionType[txSearchType] || TransactionSearchParams[txSearchType]) {
+      if (
+        typeof TransactionType[txSearchType] === 'undefined' &&
+        typeof TransactionSearchParams[txSearchType] === 'undefined'
+      ) {
         reply.send({ success: false, error: 'Invalid transaction search type' })
         return
       }
@@ -464,7 +470,7 @@ const start = async (): Promise<void> => {
     }
     if (query.page) {
       page = parseInt(query.page)
-      if (page <= 1 || Number.isNaN(page)) {
+      if (page < 1 || Number.isNaN(page)) {
         reply.send({ success: false, error: 'Invalid page number' })
         return
       }
@@ -603,7 +609,7 @@ const start = async (): Promise<void> => {
     }
     if (query.page) {
       page = parseInt(query.page)
-      if (page <= 1 || Number.isNaN(page)) {
+      if (page < 1 || Number.isNaN(page)) {
         reply.send({ success: false, error: 'Invalid page number' })
         return
       }
@@ -753,7 +759,7 @@ const start = async (): Promise<void> => {
     }
     if (query.page) {
       page = parseInt(query.page)
-      if (page <= 1 || Number.isNaN(page)) {
+      if (page < 1 || Number.isNaN(page)) {
         reply.send({ success: false, error: 'Invalid page number' })
         return
       }

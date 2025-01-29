@@ -1,5 +1,5 @@
 {
-  "name": "collector",
+  "name": "@liberdus/collector",
   "version": "1.0.0",
   "private": true,
   "main": "dist/src/collector.js",
