@@ -88,8 +88,8 @@ export async function processTransactionData(transactions: Transaction[]): Promi
 }
 
 export async function queryTransactionCount(
-  accountId?: string,
   txType?: TransactionSearchType,
+  accountId?: string,
   startCycleNumber?: number,
   endCycleNumber?: number,
   beforeTimestamp?: number,
@@ -99,11 +99,6 @@ export async function queryTransactionCount(
   try {
     let sql = `SELECT COUNT(*) FROM transactions`
     const values: unknown[] = []
-    if (accountId) {
-      sql = db.updateSqlStatementClause(sql, values)
-      sql += `txFrom=? OR txTo=?`
-      values.push(accountId, accountId)
-    }
     if (txType) {
       if (txType === TransactionSearchParams.all) {
         // do nothing
@@ -112,6 +107,11 @@ export async function queryTransactionCount(
         sql += `transactionType=?`
         values.push(txType)
       }
+    }
+    if (accountId) {
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `(txFrom=? OR txTo=?)`
+      values.push(accountId, accountId)
     }
     if (startCycleNumber || endCycleNumber) {
       sql = db.updateSqlStatementClause(sql, values)
@@ -135,8 +135,8 @@ export async function queryTransactionCount(
 export async function queryTransactions(
   skip = 0,
   limit = 10,
-  accountId?: string,
   txType?: TransactionSearchType,
+  accountId?: string,
   startCycleNumber?: number,
   endCycleNumber?: number,
   beforeTimestamp?: number,
@@ -146,11 +146,6 @@ export async function queryTransactions(
   try {
     let sql = `SELECT * FROM transactions`
     const values: unknown[] = []
-    if (accountId) {
-      sql = db.updateSqlStatementClause(sql, values)
-      sql += `txFrom=? OR txTo=?`
-      values.push(accountId, accountId)
-    }
     if (txType) {
       if (txType === TransactionSearchParams.all) {
         // do nothing
@@ -159,6 +154,11 @@ export async function queryTransactions(
         sql += `transactionType=?`
         values.push(txType)
       }
+    }
+    if (accountId) {
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `(txFrom=? OR txTo=?)`
+      values.push(accountId, accountId)
     }
     if (startCycleNumber || endCycleNumber) {
       sql = db.updateSqlStatementClause(sql, values)
