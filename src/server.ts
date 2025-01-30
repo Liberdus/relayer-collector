@@ -240,7 +240,7 @@ const start = async (): Promise<void> => {
     let accountSearchType: AccountSearchType
     let startCycle = 0
     let endCycle = 0
-    let page = 0
+    let page = 1
     const res: AccountResponse = {
       success: true,
       accounts: [] as Account[],
@@ -316,18 +316,15 @@ const start = async (): Promise<void> => {
       totalAccounts = await AccountDB.queryAccountCount(startCycle, endCycle, accountSearchType)
       res.totalAccounts = totalAccounts
     }
-    if (page > 0) {
-      totalPages = Math.ceil(totalAccounts / itemsPerPage)
-      if (page > totalPages) {
-        reply.send({
-          success: false,
-          error: 'Page no is greater than the totalPage',
-        })
-      }
-      res.totalPages = totalPages
+    totalPages = Math.ceil(totalAccounts / itemsPerPage)
+    if (page > 1 && page > totalPages) {
+      reply.send({
+        success: false,
+        error: 'Page no is greater than the totalPage',
+      })
     }
+    res.totalPages = totalPages
     if (totalAccounts > 0) {
-      if (page === 0) page = 1
       res.accounts = await AccountDB.queryAccounts(
         (page - 1) * itemsPerPage,
         itemsPerPage,
@@ -395,7 +392,7 @@ const start = async (): Promise<void> => {
     let txSearchType: TransactionSearchType
     let startCycle = 0
     let endCycle = 0
-    let page = 0
+    let page = 1
     let accountId = ''
     const res: TransactionResponse = {
       success: true,
@@ -424,8 +421,8 @@ const start = async (): Promise<void> => {
         })
         return
       }
-      res.transactions = await TransactionDB.queryTransactions(0, count, null, txSearchType)
-      res.totalTransactions = await TransactionDB.queryTransactionCount(null, txSearchType)
+      res.transactions = await TransactionDB.queryTransactions(0, count, txSearchType)
+      res.totalTransactions = await TransactionDB.queryTransactionCount(txSearchType)
       reply.send(res)
       return
     } else if (query.txId) {
@@ -477,30 +474,27 @@ const start = async (): Promise<void> => {
     }
     if (accountId || startCycle > 0 || endCycle > 0 || page > 0 || txSearchType) {
       totalTransactions = await TransactionDB.queryTransactionCount(
-        accountId,
         txSearchType,
+        accountId,
         startCycle,
         endCycle
       )
       res.totalTransactions = totalTransactions
     }
-    if (page > 0) {
-      totalPages = Math.ceil(totalTransactions / itemsPerPage)
-      if (page > totalPages) {
-        reply.send({
-          success: false,
-          error: 'Page no is greater than the totalPage',
-        })
-      }
-      res.totalPages = totalPages
+    totalPages = Math.ceil(totalTransactions / itemsPerPage)
+    if (page > 1 && page > totalPages) {
+      reply.send({
+        success: false,
+        error: 'Page no is greater than the totalPage',
+      })
     }
+    res.totalPages = totalPages
     if (totalTransactions > 0) {
-      if (page === 0) page = 1
       res.transactions = await TransactionDB.queryTransactions(
         (page - 1) * itemsPerPage,
         itemsPerPage,
-        accountId,
         txSearchType,
+        accountId,
         startCycle,
         endCycle
       )
@@ -545,7 +539,7 @@ const start = async (): Promise<void> => {
     const itemsPerPage = 10
     let totalPages = 0
     let totalReceipts = 0
-    let page = 0
+    let page = 1
     let startCycle = 0
     let endCycle = 0
     const res: ReceiptResponse = {
@@ -618,18 +612,15 @@ const start = async (): Promise<void> => {
       totalReceipts = await ReceiptDB.queryReceiptCount(startCycle, endCycle)
       res.totalReceipts = totalReceipts
     }
-    if (page > 0) {
-      totalPages = Math.ceil(totalReceipts / itemsPerPage)
-      if (page > totalPages) {
-        reply.send({
-          success: false,
-          error: 'Page no is greater than the totalPage',
-        })
-      }
-      res.totalPages = totalPages
+    totalPages = Math.ceil(totalReceipts / itemsPerPage)
+    if (page > 1 && page > totalPages) {
+      reply.send({
+        success: false,
+        error: 'Page no is greater than the totalPage',
+      })
     }
+    res.totalPages = totalPages
     if (totalReceipts > 0) {
-      if (page === 0) page = 1
       res.receipts = await ReceiptDB.queryReceipts(
         (page - 1) * itemsPerPage,
         itemsPerPage,
@@ -687,7 +678,7 @@ const start = async (): Promise<void> => {
     const itemsPerPage = 10
     let totalPages = 0
     let totalOriginalTxs = 0
-    let page = 0
+    let page = 1
     let startCycle = 0
     let endCycle = 0
     let accountId = ''
@@ -768,18 +759,15 @@ const start = async (): Promise<void> => {
       totalOriginalTxs = await OriginalTxDataDB.queryOriginalTxDataCount(accountId, startCycle, endCycle)
       res.totalOriginalTxs = totalOriginalTxs
     }
-    if (page > 0) {
-      totalPages = Math.ceil(totalOriginalTxs / itemsPerPage)
-      if (page > totalPages) {
-        reply.send({
-          success: false,
-          error: 'Page no is greater than the totalPage',
-        })
-      }
-      res.totalPages = totalPages
+    totalPages = Math.ceil(totalOriginalTxs / itemsPerPage)
+    if (page > 1 && page > totalPages) {
+      reply.send({
+        success: false,
+        error: 'Page no is greater than the totalPage',
+      })
     }
+    res.totalPages = totalPages
     if (totalOriginalTxs > 0) {
-      if (page === 0) page = 1
       res.originalTxs = await OriginalTxDataDB.queryOriginalTxsData(
         (page - 1) * itemsPerPage,
         itemsPerPage,

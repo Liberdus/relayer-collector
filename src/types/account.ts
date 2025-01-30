@@ -12,16 +12,7 @@ export interface Account extends AccountsCopy {
   accountType?: AccountType
 }
 
-// AccountEntry: is the model used by shardeum-indexer
-export interface AccountEntry {
-  accountId: string
-  timestamp: number
-  data: any // eslint-disable-line @typescript-eslint/no-explicit-any
-}
-
-export enum AccountType {
-  UserAccount = 'UserAccount',
-}
+export enum AccountType {}
 
 export enum AccountSearchParams {
   'all', // All Accounts Type
