@@ -64,19 +64,53 @@ export async function processTransactionData(transactions: Transaction[]): Promi
   const bucketSize = 1000
   let combineTransactions: Transaction[] = []
   for (const transaction of transactions) {
-    const transactionType = transaction.data.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
-    const txFrom = transaction.data.from // be sure to update with the correct field of the tx sender
-    const txTo = transaction.data.to // be sure to update with the correct field of the tx recipient
-    const txObj: Transaction = {
-      txId: transaction.txId || transaction.data?.txId,
+    const txObj = {
+      txId: transaction.txId,
       cycleNumber: transaction.cycleNumber,
       timestamp: transaction.timestamp,
-      appReceiptId: transaction.appReceiptId,
-      transactionType,
-      txFrom,
-      txTo,
-      data: transaction.data,
       originalTxData: transaction.originalTxData || {},
+      data: transaction.data,
+      appReceiptId: transaction.appReceiptId,
+    } as Transaction
+    if (transaction.data) {
+      txObj.transactionType = transaction.data.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
+      txObj.txFrom = transaction.data.from // be sure to update with the correct field of the tx sender
+      txObj.txTo = transaction.data.to // be sure to update with the correct field of the tx recipient
+    } else {
+      // Extract tx receipt from original tx data
+      txObj.transactionType = transaction.originalTxData.tx.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
+      txObj.txFrom = transaction.originalTxData.tx.from // be sure to update with the correct field of the tx sender
+      txObj.txTo = transaction.originalTxData.tx.to // be sure to update with the correct field of the tx recipient
+      if (txObj.transactionType === TransactionType.create) {
+        txObj.txFrom = transaction.originalTxData.tx.from
+        txObj.txTo = transaction.originalTxData.tx.from
+      }
+      if (txObj.transactionType === TransactionType.register) {
+        txObj.txFrom = transaction.originalTxData.tx.from
+        txObj.txTo = transaction.originalTxData.tx.aliasHash
+      }
+      if (
+        txObj.transactionType === TransactionType.deposit_stake ||
+        txObj.transactionType === TransactionType.withdraw_stake
+      ) {
+        txObj.txFrom = transaction.originalTxData.tx.nominator
+        txObj.txTo = transaction.originalTxData.tx.nominee
+      } else if (txObj.transactionType === TransactionType.init_reward) {
+        txObj.txFrom = transaction.originalTxData.tx.nominee
+        txObj.txTo = transaction.originalTxData.tx.nominee
+      } else if (
+        txObj.transactionType === TransactionType.set_cert_time ||
+        txObj.transactionType === TransactionType.claim_reward
+      ) {
+        txObj.txFrom = transaction.originalTxData.tx.nominee
+        txObj.txTo = transaction.originalTxData.tx.nominator
+      } else if (txObj.transactionType === TransactionType.apply_penalty) {
+        txObj.txFrom = transaction.originalTxData.tx.reportedNodePublickKey
+        txObj.txTo = transaction.originalTxData.tx.nominator
+      } else if (txObj.transactionType === TransactionType.init_network) {
+        txObj.txFrom = transaction.originalTxData.tx.network
+        txObj.txTo = transaction.originalTxData.tx.network
+      }
     }
     combineTransactions.push(txObj)
     if (combineTransactions.length >= bucketSize) {
