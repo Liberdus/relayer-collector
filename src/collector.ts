@@ -47,6 +47,7 @@ const args = process.argv
 
 import path = require('path')
 import fs = require('fs')
+import { setupCollectorSocketServer } from './collectorServer'
 
 if (config.env == envEnum.DEV) {
   //default debug mode keys
@@ -196,6 +197,8 @@ export const startServer = async (): Promise<void> => {
   }
 
   if (CONFIG.dataLogWrite) await initDataLogWriter()
+
+  setupCollectorSocketServer();
 
   addSigListeners()
 

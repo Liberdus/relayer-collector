@@ -42,6 +42,7 @@ export interface Config {
   }
   port: {
     server: string
+    collector: string
   }
   distributorInfo: {
     ip: string
@@ -91,6 +92,7 @@ let config: Config = {
   },
   port: {
     server: process.env.PORT || '6101',
+    collector: process.env.COLLECTOR_PORT || '4444',
   },
   distributorInfo: {
     ip: process.env.DISTRIBUTOR_IP || '127.0.0.1',

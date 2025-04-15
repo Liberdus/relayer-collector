@@ -19,7 +19,9 @@ export interface AccountEntry {
   data: any // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
-export enum AccountType {}
+export enum AccountType {
+  UserAccount = 'UserAccount',
+}
 
 export enum AccountSearchType {
   All, // All Accounts Type
