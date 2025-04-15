@@ -44,7 +44,6 @@
     "sqlite3": "5.1.6",
     "ts-node": "10.9.1",
     "ts-node-dev": "2.0.0",
-    "web3": "4.0.2",
     "ws": "^8.18.1"
   },
   "devDependencies": {

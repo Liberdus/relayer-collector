@@ -27,6 +27,7 @@ import { sleep } from './utils'
 import RMQCyclesConsumer from './collectors/rmq/cycles'
 import RMQOriginalTxsConsumer from './collectors/rmq/original_txs'
 import RMQReceiptsConsumer from './collectors/rmq/receipts'
+import { setupCollectorSocketServer } from './collectorServer'
 
 const DistributorFirehoseEvent = 'FIREHOSE'
 let ws: WebSocket
@@ -174,7 +175,6 @@ export const checkAndSyncData = async (): Promise<Function> => {
       )
     }
   }
-
 
   // Refresh the total data to sync after collector connected to distributor
   response = await queryFromDistributor(DataType.TOTALDATA, {})
@@ -370,6 +370,8 @@ const startServer = async (): Promise<void> => {
   if (config.dataLogWrite) await initDataLogWriter()
 
   addSigListeners()
+
+  setupCollectorSocketServer()
 
   if (config.collectorMode === collectorMode.MQ) {
     startRMQEventsConsumers()
