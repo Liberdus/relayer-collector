@@ -12,7 +12,9 @@ export interface Account extends AccountsCopy {
   accountType?: AccountType
 }
 
-export enum AccountType {}
+export enum AccountType {
+  UserAccount = 'UserAccount',
+}
 
 export enum AccountSearchParams {
   'all', // All Accounts Type
