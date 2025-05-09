@@ -9,6 +9,7 @@ import * as TransactionDB from './transaction'
 import * as OriginalTxDataDB from './originalTxData'
 import * as AccountHistoryStateDB from './accountHistoryState'
 
+
 export let cycleDatabase: Database
 export let accountDatabase: Database
 export let transactionDatabase: Database
@@ -47,7 +48,7 @@ export const initializeDB = async (): Promise<void> => {
   await runCreate(cycleDatabase, 'CREATE INDEX if not exists `cycles_idx` ON `cycles` (`counter` DESC)')
   await runCreate(
     accountDatabase,
-    'CREATE TABLE if not exists `accounts` (`accountId` TEXT NOT NULL UNIQUE PRIMARY KEY, `data` JSON NOT NULL, `timestamp` BIGINT NOT NULL, `hash` TEXT NOT NULL, `cycleNumber` NUMBER NOT NULL, `isGlobal` BOOLEAN NOT NULL, `accountType` TEXT)'
+    'CREATE TABLE if not exists `accounts` (`accountId` TEXT NOT NULL UNIQUE PRIMARY KEY, `data` JSON NOT NULL, `timestamp` BIGINT NOT NULL, `hash` TEXT NOT NULL, `cycleNumber` NUMBER NOT NULL, `isGlobal` BOOLEAN NOT NULL, `accountType` TEXT NOT NULL)'
   )
   await runCreate(
     accountDatabase,
@@ -56,7 +57,7 @@ export const initializeDB = async (): Promise<void> => {
   // be sure to adjust the data types of `transactionType`, `txFrom`, `txTo` as needed
   await runCreate(
     transactionDatabase,
-    'CREATE TABLE if not exists `transactions` (`txId` TEXT NOT NULL UNIQUE PRIMARY KEY, `appReceiptId` TEXT, `timestamp` BIGINT NOT NULL, `cycleNumber` NUMBER NOT NULL, `data` JSON NOT NULL, `originalTxData` JSON NOT NULL, `transactionType` TEXT, `txFrom` TEXT, `txTo` TEXT)'
+    'CREATE TABLE if not exists `transactions` (`txId` TEXT NOT NULL UNIQUE PRIMARY KEY, `appReceiptId` TEXT, `timestamp` BIGINT NOT NULL, `cycleNumber` NUMBER NOT NULL, `data` JSON NOT NULL, `originalTxData` JSON NOT NULL, `transactionType` TEXT, `txFrom` TEXT, `txTo` TEXT, `nominee` TEXT)'
   )
   await runCreate(
     transactionDatabase,
@@ -81,6 +82,10 @@ export const initializeDB = async (): Promise<void> => {
   await runCreate(
     transactionDatabase,
     'CREATE INDEX if not exists `transactions_txTo` ON `transactions` (`txTo`)'
+  )
+  await runCreate(
+    transactionDatabase,
+    'CREATE INDEX if not exists `transactions_nominee` ON `transactions` (`nominee`)'
   )
   await runCreate(
     receiptDatabase,
