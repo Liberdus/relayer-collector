@@ -81,36 +81,6 @@ export async function processTransactionData(transactions: Transaction[]): Promi
       txObj.transactionType = transaction.originalTxData.tx.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
       txObj.txFrom = transaction.originalTxData.tx.from // be sure to update with the correct field of the tx sender
       txObj.txTo = transaction.originalTxData.tx.to // be sure to update with the correct field of the tx recipient
-      if (txObj.transactionType === TransactionType.create) {
-        txObj.txFrom = transaction.originalTxData.tx.from
-        txObj.txTo = transaction.originalTxData.tx.from
-      }
-      if (txObj.transactionType === TransactionType.register) {
-        txObj.txFrom = transaction.originalTxData.tx.from
-        txObj.txTo = transaction.originalTxData.tx.aliasHash
-      }
-      if (
-        txObj.transactionType === TransactionType.deposit_stake ||
-        txObj.transactionType === TransactionType.withdraw_stake
-      ) {
-        txObj.txFrom = transaction.originalTxData.tx.nominator
-        txObj.txTo = transaction.originalTxData.tx.nominee
-      } else if (txObj.transactionType === TransactionType.init_reward) {
-        txObj.txFrom = transaction.originalTxData.tx.nominee
-        txObj.txTo = transaction.originalTxData.tx.nominee
-      } else if (
-        txObj.transactionType === TransactionType.set_cert_time ||
-        txObj.transactionType === TransactionType.claim_reward
-      ) {
-        txObj.txFrom = transaction.originalTxData.tx.nominee
-        txObj.txTo = transaction.originalTxData.tx.nominator
-      } else if (txObj.transactionType === TransactionType.apply_penalty) {
-        txObj.txFrom = transaction.originalTxData.tx.reportedNodePublickKey
-        txObj.txTo = transaction.originalTxData.tx.nominator
-      } else if (txObj.transactionType === TransactionType.init_network) {
-        txObj.txFrom = transaction.originalTxData.tx.network
-        txObj.txTo = transaction.originalTxData.tx.network
-      }
     }
     combineTransactions.push(txObj)
     if (combineTransactions.length >= bucketSize) {
@@ -126,8 +96,8 @@ export async function queryTransactionCount(
   accountId?: string,
   startCycleNumber?: number,
   endCycleNumber?: number,
-  beforeTimestamp?: number,
-  afterTimestamp?: number
+  startTimestamp?: number,
+  endTimestamp?: number
 ): Promise<number> {
   let transactions: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   try {
@@ -152,12 +122,13 @@ export async function queryTransactionCount(
       sql += `cycleNumber BETWEEN ? AND ?`
       values.push(startCycleNumber, endCycleNumber)
     }
-    if (beforeTimestamp || afterTimestamp) {
+    if (startTimestamp || endTimestamp) {
       sql = db.updateSqlStatementClause(sql, values)
       sql += `timestamp BETWEEN ? AND ?`
-      values.push(beforeTimestamp, afterTimestamp)
+      values.push(startTimestamp, endTimestamp)
     }
     transactions = (await db.get(transactionDatabase, sql, values)) as { 'COUNT(*)': number }
+    // console.log('queryTransactionCount', sql, values, transactions)
   } catch (e) {
     console.log(e)
   }
@@ -173,8 +144,8 @@ export async function queryTransactions(
   accountId?: string,
   startCycleNumber?: number,
   endCycleNumber?: number,
-  beforeTimestamp?: number,
-  afterTimestamp?: number
+  startTimestamp?: number,
+  endTimestamp?: number
 ): Promise<DbTransaction[]> {
   let transactions: DbTransaction[] = []
   try {
@@ -194,22 +165,24 @@ export async function queryTransactions(
       sql += `(txFrom=? OR txTo=?)`
       values.push(accountId, accountId)
     }
+
     if (startCycleNumber || endCycleNumber) {
       sql = db.updateSqlStatementClause(sql, values)
       sql += `cycleNumber BETWEEN ? AND ?`
       values.push(startCycleNumber, endCycleNumber)
     }
-    if (beforeTimestamp || afterTimestamp) {
+    if (startTimestamp || endTimestamp) {
       sql = db.updateSqlStatementClause(sql, values)
       sql += `timestamp BETWEEN ? AND ?`
-      values.push(beforeTimestamp, afterTimestamp)
+      values.push(startTimestamp, endTimestamp)
     }
-    if (startCycleNumber || endCycleNumber) {
+    if (startCycleNumber || endCycleNumber || startTimestamp || endTimestamp) {
       sql += ` ORDER BY cycleNumber ASC, timestamp ASC LIMIT ${limit} OFFSET ${skip}`
     } else {
       sql += ` ORDER BY cycleNumber DESC, timestamp DESC LIMIT ${limit} OFFSET ${skip}`
     }
     transactions = (await db.all(transactionDatabase, sql, values)) as DbTransaction[]
+    // console.log('queryTransactions', sql, values, transactions)
     if (transactions.length > 0) {
       transactions.forEach((transaction: DbTransaction) => {
         deserializeDbTransaction(transaction)

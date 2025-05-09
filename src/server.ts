@@ -10,14 +10,14 @@ import * as Storage from './storage'
 import { AccountDB, CycleDB, ReceiptDB, TransactionDB, OriginalTxDataDB } from './storage'
 import {
   Account,
-  AccountSearchParams,
   AccountSearchType,
   AccountType,
   OriginalTxResponse,
   Transaction,
-  TransactionSearchParams,
   TransactionSearchType,
+  TransactionSearchParams,
   TransactionType,
+  AccountSearchParams,
 } from './types'
 import { AccountResponse, ReceiptResponse, TransactionResponse } from './types'
 import * as utils from './utils'
@@ -246,7 +246,6 @@ const start = async (): Promise<void> => {
       accounts: [] as Account[],
     }
     if (query.accountSearchType) {
-      accountSearchType = query.accountSearchType
       if (
         typeof AccountType[query.accountSearchType] === 'undefined' &&
         typeof AccountSearchParams[query.accountSearchType] === 'undefined'
@@ -345,8 +344,9 @@ const start = async (): Promise<void> => {
       endCycle: string
       accountId: string
       txId: string
-      beforeTimestamp: string
-      afterTimestamp: string
+      startTimestamp: string
+      endTimestamp: string
+      appReceiptId: string
     }
   }>
 
@@ -359,8 +359,9 @@ const start = async (): Promise<void> => {
       startCycle: 's?',
       endCycle: 's?',
       txId: 's?',
-      beforeTimestamp: 's?',
-      afterTimestamp: 's?',
+      startTimestamp: 's?',
+      endTimestamp: 's?',
+      appReceiptId: 's?',
     })
     if (err) {
       reply.send({ success: false, error: err })
@@ -377,8 +378,9 @@ const start = async (): Promise<void> => {
       !query.startCycle &&
       !query.endCycle &&
       !query.txId &&
-      !query.beforeTimestamp &&
-      !query.afterTimestamp
+      !query.startTimestamp &&
+      !query.endTimestamp &&
+      !query.appReceiptId
     ) {
       reply.send({
         success: false,
@@ -392,6 +394,8 @@ const start = async (): Promise<void> => {
     let txSearchType: TransactionSearchType
     let startCycle = 0
     let endCycle = 0
+    let startTimestamp = 0
+    let endTimestamp = 0
     let page = 1
     let accountId = ''
     const res: TransactionResponse = {
@@ -400,6 +404,7 @@ const start = async (): Promise<void> => {
     }
     if (query.txSearchType) {
       txSearchType = query.txSearchType as TransactionSearchType
+      // Check if the parsed value is a valid enum value
       if (
         typeof TransactionType[txSearchType] === 'undefined' &&
         typeof TransactionSearchParams[txSearchType] === 'undefined'
@@ -435,6 +440,16 @@ const start = async (): Promise<void> => {
       if (transactions) res.transactions = [transactions]
       reply.send(res)
       return
+    } else if (query.appReceiptId) {
+      const appReceiptId = query.appReceiptId.toLowerCase()
+      if (appReceiptId.length !== 64) {
+        reply.send({ success: false, error: 'Invalid app receipt id' })
+        return
+      }
+      const transactions = await TransactionDB.queryTransactionByAppReceiptId(appReceiptId)
+      if (transactions && transactions.length > 0) reply.send({ transaction: transactions[0].data })
+      else reply.send({ transaction: null })
+      return
     }
     if (query.accountId) {
       accountId = query.accountId.toLowerCase()
@@ -465,6 +480,21 @@ const start = async (): Promise<void> => {
         }
       }
     }
+    if (query.startTimestamp) {
+      startTimestamp = parseInt(query.startTimestamp)
+      if (startTimestamp < 0 || Number.isNaN(startTimestamp)) {
+        reply.send({ success: false, error: 'Invalid start timestamp' })
+        return
+      }
+      endTimestamp = startTimestamp
+      if (query.endTimestamp) {
+        endTimestamp = parseInt(query.endTimestamp)
+        if (endTimestamp < 0 || Number.isNaN(endTimestamp) || endTimestamp < startTimestamp) {
+          reply.send({ success: false, error: 'Invalid end timestamp' })
+          return
+        }
+      }
+    }
     if (query.page) {
       page = parseInt(query.page)
       if (page < 1 || Number.isNaN(page)) {
@@ -477,7 +507,9 @@ const start = async (): Promise<void> => {
         txSearchType,
         accountId,
         startCycle,
-        endCycle
+        endCycle,
+        startTimestamp,
+        endTimestamp
       )
       res.totalTransactions = totalTransactions
     }
@@ -496,7 +528,9 @@ const start = async (): Promise<void> => {
         txSearchType,
         accountId,
         startCycle,
-        endCycle
+        endCycle,
+        startTimestamp,
+        endTimestamp
       )
     }
     reply.send(res)
@@ -529,7 +563,7 @@ const start = async (): Promise<void> => {
     /* prettier-ignore */ if (config.verbose) console.log('Request', _request.query);
     const query = _request.query
     // Check at least one of the query parameters is present
-    if (!query.count && !query.txId && !query.startCycle && !query.endCycle && !query.tally) {
+    if (!query.count && !query.page && !query.txId && !query.startCycle && !query.endCycle && !query.tally) {
       reply.send({
         success: false,
         reason: 'Not specified which receipt to query',

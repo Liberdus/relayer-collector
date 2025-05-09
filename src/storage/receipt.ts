@@ -7,7 +7,6 @@ import * as AccountHistoryStateDB from './accountHistoryState'
 import { Utils as StringUtils } from '@shardus/types'
 import { AccountType, Transaction, TransactionType, Receipt, Account } from '../types'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
-import { forwardLatestAccount } from '../collectorServer'
 
 type DbReceipt = Receipt & {
   tx: string
@@ -73,7 +72,6 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
     const txReceipt = appReceiptData
     receiptsMap.set(tx.txId, tx.timestamp)
 
-
     // Receipts size can be big, better to save per 100
     if (combineReceipts.length >= 100) {
       await bulkInsertReceipts(combineReceipts)
@@ -81,7 +79,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
     }
     if (!config.processData.indexReceipt) continue
     for (const account of afterStates) {
-      const accountType = account.data.accountType as AccountType // be sure to update with the correct field with the account type defined in the dapp
+      const accountType = account.data.type as AccountType // be sure to update with the correct field with the account type defined in the dapp
       const accObj: Account = {
         accountId: account.accountId,
         cycleNumber: cycle,
@@ -91,13 +89,6 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
         accountType,
         isGlobal: account.isGlobal,
       }
-
-      if (accObj.data.type === "UserAccount") {
-        await forwardLatestAccount(accObj)
-      }
-
-
-
       const index = combineAccounts.findIndex((a) => {
         return a.accountId === accObj.accountId
       })
