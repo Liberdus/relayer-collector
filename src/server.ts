@@ -446,9 +446,9 @@ const start = async (): Promise<void> => {
         reply.send({ success: false, error: 'Invalid app receipt id' })
         return
       }
-      const transactions = await TransactionDB.queryTransactionByAppReceiptId(appReceiptId)
-      if (transactions && transactions.length > 0) reply.send({ transaction: transactions[0].data })
-      else reply.send({ transaction: null })
+      // const transactions = await TransactionDB.queryTransactionByAppReceiptId(appReceiptId)
+      const transaction = await TransactionDB.queryTransactionByTxId(appReceiptId)
+      reply.send({ transaction: transaction ? transaction.data : null })
       return
     }
     if (query.accountId) {
