@@ -7,6 +7,7 @@ import * as AccountHistoryStateDB from './accountHistoryState'
 import { Utils as StringUtils } from '@shardus/types'
 import { AccountType, Transaction, TransactionType, Receipt, Account } from '../types'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
+import { forwardLatestAccount } from '../collectorServer'
 
 type DbReceipt = Receipt & {
   tx: string
@@ -89,6 +90,11 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
         accountType,
         isGlobal: account.isGlobal,
       }
+
+      if (accObj.data.type === AccountType.UserAccount) {
+        await forwardLatestAccount(accObj)
+      }
+
       const index = combineAccounts.findIndex((a) => {
         return a.accountId === accObj.accountId
       })
