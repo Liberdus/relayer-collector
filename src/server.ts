@@ -335,6 +335,88 @@ const start = async (): Promise<void> => {
     reply.send(res)
   })
 
+  type PollDataRequest = FastifyRequest<{
+    Querystring: {
+      account: string
+      chatTimestamp: string
+    }
+  }>
+
+  server.get('/api/poll', async (_request: PollDataRequest, reply) => {
+    const err = utils.validateTypes(_request.query, {
+      account: 's',
+      chatTimestamp: 's',
+    })
+    if (err) {
+      reply.send({ success: false, error: err })
+      return
+    }
+
+    const query = _request.query
+    const accountId = query.account.toLowerCase()
+    const chatTimestamp = parseInt(query.chatTimestamp)
+
+    // Validate account ID format
+    if (accountId.length !== 64) {
+      reply.send({ success: false, reason: 'Invalid account id' })
+      return
+    }
+
+    // Validate timestamp
+    if (isNaN(chatTimestamp) || chatTimestamp < 0) {
+      reply.send({ success: false, reason: 'Invalid chatTimestamp' })
+      return
+    }
+
+    // Check if account exists
+    const account = await AccountDB.queryAccountByAccountId(accountId)
+    if (!account) {
+      reply.send({ success: false, reason: 'account not found' })
+      return
+    }
+
+    const startTime = Date.now()
+    const timeoutMs = 120000 // 120 seconds
+    const checkIntervalMs = 1000 // 1 second
+
+    const checkForChange = async (): Promise<void> => {
+      try {
+        const account = await AccountDB.queryAccountByAccountId(accountId)
+        const currentChatTimestamp = account.data?.chatTimestamp
+
+        // Check if the chatTimestamp has changed
+        if (currentChatTimestamp && currentChatTimestamp !== chatTimestamp) {
+          reply.send({
+            success: true,
+            chatTimestamp: currentChatTimestamp,
+          })
+          return
+        }
+
+        // Check if we've exceeded the timeout
+        if (Date.now() - startTime >= timeoutMs) {
+          reply.send({
+            success: false,
+            reason: 'no change',
+          })
+          return
+        }
+
+        // Wait for the next check
+        setTimeout(checkForChange, checkIntervalMs)
+      } catch (error) {
+        console.error('Error in poll endpoint:', error)
+        reply.send({
+          success: false,
+          reason: 'internal server error',
+        })
+      }
+    }
+
+    // Start checking for changes
+    checkForChange()
+  })
+
   type TransactionDataRequest = FastifyRequest<{
     Querystring: {
       count: string
