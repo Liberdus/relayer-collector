@@ -377,7 +377,7 @@ const start = async (): Promise<void> => {
       return
     } else {
       currentChatTimestamp = account.data?.data?.chatTimestamp
-      if (currentChatTimestamp && currentChatTimestamp === chatTimestamp) {
+      if (currentChatTimestamp && currentChatTimestamp !== chatTimestamp) {
         return reply.send({ success: true, chatTimestamp: currentChatTimestamp })
       }
     }
