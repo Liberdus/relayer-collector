@@ -376,45 +376,21 @@ const start = async (): Promise<void> => {
     }
 
     const startTime = Date.now()
-    const timeoutMs = 120000 // 120 seconds
+    const timeoutMs = 120 * 1000 // 120 seconds
     const checkIntervalMs = 1000 // 1 second
 
-    const checkForChange = async (): Promise<void> => {
-      try {
-        const account = await AccountDB.queryAccountByAccountId(accountId)
-        const currentChatTimestamp = account.data?.chatTimestamp
+    while (Date.now() - startTime < timeoutMs) {
+      const account = await AccountDB.queryAccountByAccountId(accountId)
 
-        // Check if the chatTimestamp has changed
-        if (currentChatTimestamp && currentChatTimestamp !== chatTimestamp) {
-          reply.send({
-            success: true,
-            chatTimestamp: currentChatTimestamp,
-          })
-          return
-        }
-
-        // Check if we've exceeded the timeout
-        if (Date.now() - startTime >= timeoutMs) {
-          reply.send({
-            success: false,
-            reason: 'no change',
-          })
-          return
-        }
-
-        // Wait for the next check
-        setTimeout(checkForChange, checkIntervalMs)
-      } catch (error) {
-        console.error('Error in poll endpoint:', error)
-        reply.send({
-          success: false,
-          reason: 'internal server error',
-        })
+      const currentChatTimestamp = account.data?.data?.chatTimestamp
+      if (currentChatTimestamp && currentChatTimestamp !== chatTimestamp) {
+        return reply.send({ success: true, chatTimestamp: currentChatTimestamp })
       }
+
+      await utils.sleep(checkIntervalMs)
     }
 
-    // Start checking for changes
-    checkForChange()
+    return reply.send({ success: false, reason: 'no change' })
   })
 
   type TransactionDataRequest = FastifyRequest<{
