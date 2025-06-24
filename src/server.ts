@@ -369,10 +369,17 @@ const start = async (): Promise<void> => {
     }
 
     // Check if account exists
-    const account = await AccountDB.queryAccountByAccountId(accountId)
+    let account: Account
+    let currentChatTimestamp = 0
+    account = await AccountDB.queryAccountByAccountId(accountId)
     if (!account) {
       reply.send({ success: false, reason: 'account not found' })
       return
+    } else {
+      currentChatTimestamp = account.data?.data?.chatTimestamp
+      if (currentChatTimestamp && currentChatTimestamp === chatTimestamp) {
+        return reply.send({ success: true, chatTimestamp: currentChatTimestamp })
+      }
     }
 
     const startTime = Date.now()
@@ -380,9 +387,9 @@ const start = async (): Promise<void> => {
     const checkIntervalMs = 1000 // 1 second
 
     while (Date.now() - startTime < timeoutMs) {
-      const account = await AccountDB.queryAccountByAccountId(accountId)
+      account = await AccountDB.queryAccountByAccountId(accountId)
 
-      const currentChatTimestamp = account.data?.data?.chatTimestamp
+      currentChatTimestamp = account.data?.data?.chatTimestamp
       if (currentChatTimestamp && currentChatTimestamp !== chatTimestamp) {
         return reply.send({ success: true, chatTimestamp: currentChatTimestamp })
       }
