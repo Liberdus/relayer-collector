@@ -375,16 +375,21 @@ const start = async (): Promise<void> => {
     if (!account) {
       reply.send({ success: false, reason: 'account not found' })
       return
-    } else {
-      currentChatTimestamp = account.data?.data?.chatTimestamp
-      if (currentChatTimestamp && currentChatTimestamp !== chatTimestamp) {
-        return reply.send({ success: true, chatTimestamp: currentChatTimestamp })
-      }
+    }
+
+    currentChatTimestamp = account.data?.data?.chatTimestamp
+    if (currentChatTimestamp === undefined) {
+      return reply.send({ success: false, reason: 'chatTimestamp does not exist in the searched account' })
+    }
+    if (currentChatTimestamp && currentChatTimestamp !== chatTimestamp) {
+      return reply.send({ success: true, chatTimestamp: currentChatTimestamp })
     }
 
     const startTime = Date.now()
     const timeoutMs = 120 * 1000 // 120 seconds
     const checkIntervalMs = 1000 // 1 second
+
+    await utils.sleep(checkIntervalMs)
 
     while (Date.now() - startTime < timeoutMs) {
       account = await AccountDB.queryAccountByAccountId(accountId)
