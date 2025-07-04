@@ -1,10 +1,13 @@
 import { WebSocketServer, WebSocket } from 'ws'
 import { config as CONFIG } from './config'
-import { Account, Receipt } from './types'
+import { Account, Receipt, Transaction, AppReceipt } from './types'
 import { Utils as StringUtils } from '@shardus/types'
 import * as crypto from '@shardus/crypto-utils'
 
 export const ReceiptDataWsEvent = '/data/receipt'
+export const AccountDataWsEvent = '/data/account'
+export const TransactionDataWsEvent = '/data/transaction'
+export const AppReceiptDataWsEvent = '/data/appReceipt'
 
 const subscribers = new Map<string, WebSocket>()
 
@@ -31,14 +34,26 @@ export const setupCollectorSocketServer = (): void => {
   console.log(`AccountUpdate sender listening on port ${CONFIG.port.collector}`)
 }
 
-export const forwardLatestAccount = async (data: Account): Promise<void> => {
+export const forwardData = async (
+  type: string,
+  data: Account | Receipt | Transaction | AppReceipt
+): Promise<void> => {
+  if (
+    type !== AccountDataWsEvent &&
+    type !== ReceiptDataWsEvent &&
+    type !== TransactionDataWsEvent &&
+    type !== AppReceiptDataWsEvent
+  ) {
+    console.log('Unknown data type, skipping forwarding to subscribers', type)
+    return
+  }
   if (subscribers.size === 0) {
-    console.log('No notification service connected, skipping sending receipt data')
+    console.log('No notification service connected, skipping forwardingdata')
     return
   }
 
   const message = JSON.stringify({
-    event: ReceiptDataWsEvent,
+    event: type,
     data: StringUtils.safeStringify(data),
   })
 
@@ -50,6 +65,5 @@ export const forwardLatestAccount = async (data: Account): Promise<void> => {
     }
   }
 
-  if (CONFIG.verbose)
-    console.log(`Forwarded receipt data to ${subscribers.size} notification servers`)
+  if (CONFIG.verbose) console.log(`Forwarded data to ${subscribers.size} notification servers`)
 }
