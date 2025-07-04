@@ -10,6 +10,8 @@ export interface Transaction {
   txTo?: string
 }
 
+export type AppReceipt = object
+
 export enum TransactionType {
   init_network = 'init_network',
   network_windows = 'network_windows',

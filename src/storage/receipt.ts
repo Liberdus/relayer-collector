@@ -7,7 +7,13 @@ import * as AccountHistoryStateDB from './accountHistoryState'
 import { Utils as StringUtils } from '@shardus/types'
 import { AccountType, Transaction, TransactionType, Receipt, Account } from '../types'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
-import { forwardLatestAccount } from '../collectorServer'
+import {
+  forwardData,
+  ReceiptDataWsEvent,
+  AccountDataWsEvent,
+  TransactionDataWsEvent,
+  AppReceiptDataWsEvent,
+} from '../collectorServer'
 
 type DbReceipt = Receipt & {
   tx: string
@@ -73,6 +79,10 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
     const txReceipt = appReceiptData
     receiptsMap.set(tx.txId, tx.timestamp)
 
+    if (config.collectorSockerServer.enabled && config.collectorSockerServer.forwardReceipt) {
+      forwardData(ReceiptDataWsEvent, receiptObj)
+    }
+
     // Receipts size can be big, better to save per 100
     if (combineReceipts.length >= 100) {
       await bulkInsertReceipts(combineReceipts)
@@ -91,8 +101,10 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
         isGlobal: account.isGlobal,
       }
 
-      if (accObj.data.type === AccountType.UserAccount) {
-        await forwardLatestAccount(accObj)
+      if (config.collectorSockerServer.enabled && config.collectorSockerServer.forwardAccount) {
+        if (accObj.data.type === AccountType.UserAccount) {
+          forwardData(AccountDataWsEvent, accObj)
+        }
       }
 
       const index = combineAccounts.findIndex((a) => {
@@ -181,6 +193,11 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
     } else if (transactionExist.timestamp < txObj.timestamp) {
       await TransactionDB.insertTransaction(txObj)
     }
+    if (config.collectorSockerServer.enabled) {
+      if (config.collectorSockerServer.forwardTransaction) forwardData(TransactionDataWsEvent, txObj)
+      if (config.collectorSockerServer.forwardAppReceipt) forwardData(AppReceiptDataWsEvent, txObj.data)
+    }
+
     if (config.saveAccountHistoryState) {
       // Note: This has to be changed once we change the way the global modification tx consensus is updated
       if (
