@@ -45,10 +45,6 @@ export interface Config {
   }
   collectorSockerServer: {
     enabled: boolean
-    forwardReceipt: boolean
-    forwardAccount: boolean
-    forwardTransaction: boolean
-    forwardAppReceipt: boolean
   }
   distributorInfo: {
     ip: string
@@ -111,10 +107,6 @@ let config: Config = {
   },
   collectorSockerServer: {
     enabled: true,
-    forwardReceipt: false,
-    forwardAccount: false,
-    forwardTransaction: false,
-    forwardAppReceipt: true,
   },
   distributorInfo: {
     ip: process.env.DISTRIBUTOR_IP || '127.0.0.1',

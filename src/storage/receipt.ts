@@ -7,13 +7,7 @@ import * as AccountHistoryStateDB from './accountHistoryState'
 import { Utils as StringUtils } from '@shardus/types'
 import { AccountType, Transaction, TransactionType, Receipt, Account } from '../types'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
-import {
-  forwardData,
-  ReceiptDataWsEvent,
-  AccountDataWsEvent,
-  TransactionDataWsEvent,
-  AppReceiptDataWsEvent,
-} from '../collectorServer'
+import { forwardData } from '../collectorServer'
 
 type DbReceipt = Receipt & {
   tx: string
@@ -76,11 +70,10 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       const receiptExist = await queryReceiptByReceiptId(tx.txId)
       if (!receiptExist) combineReceipts.push(modifiedReceiptObj as unknown as Receipt)
     } else combineReceipts.push(modifiedReceiptObj as unknown as Receipt)
-    const txReceipt = appReceiptData
     receiptsMap.set(tx.txId, tx.timestamp)
 
-    if (config.collectorSockerServer.enabled && config.collectorSockerServer.forwardReceipt) {
-      forwardData(ReceiptDataWsEvent, receiptObj)
+    if (config.collectorSockerServer.enabled) {
+      forwardData(receiptObj)
     }
 
     // Receipts size can be big, better to save per 100
@@ -89,6 +82,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       combineReceipts = []
     }
     if (!config.processData.indexReceipt) continue
+    const txReceipt = appReceiptData
     for (const account of afterStates) {
       const accountType = account.data.type as AccountType // be sure to update with the correct field with the account type defined in the dapp
       const accObj: Account = {
@@ -99,12 +93,6 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
         hash: account.hash,
         accountType,
         isGlobal: account.isGlobal,
-      }
-
-      if (config.collectorSockerServer.enabled && config.collectorSockerServer.forwardAccount) {
-        if (accObj.data.type === AccountType.UserAccount) {
-          forwardData(AccountDataWsEvent, accObj)
-        }
       }
 
       const index = combineAccounts.findIndex((a) => {
@@ -134,7 +122,6 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       //   txReceipt = { ...accObj }
       // }
     }
-
     const txObj = {
       txId: tx.txId,
       cycleNumber: cycle,
@@ -142,7 +129,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       originalTxData: tx.originalTxData || {},
     } as Transaction
 
-    if (txReceipt) {
+    if (appReceiptData) {
       txObj.transactionType = txReceipt.type as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
       txObj.txFrom = txReceipt.from // be sure to update with the correct field of the tx sender
       txObj.txTo = txReceipt.to // be sure to update with the correct field of the tx recipient
@@ -192,10 +179,6 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       combineTransactions.push(txObj)
     } else if (transactionExist.timestamp < txObj.timestamp) {
       await TransactionDB.insertTransaction(txObj)
-    }
-    if (config.collectorSockerServer.enabled) {
-      if (config.collectorSockerServer.forwardTransaction) forwardData(TransactionDataWsEvent, txObj)
-      if (config.collectorSockerServer.forwardAppReceipt) forwardData(AppReceiptDataWsEvent, txObj.data)
     }
 
     if (config.saveAccountHistoryState) {
