@@ -36,32 +36,6 @@ Object.values(SubscriptionType).forEach((type) => {
   subscribersByType.set(type, new Set<string>())
 })
 
-/**
- * Client Connection Guide:
- * -----------------------
- * Connect with subscription types as URL parameters:
- *
- * Example client code:
- * ```javascript
- * public connect(subscriptionTypes: string[] = ['/data/transaction']): void {
- *   const params = new URLSearchParams()
- *   params.set('subscriptions', JSON.stringify(subscriptionTypes))
- *   const url = `ws://${this.config.host}:${this.config.port}?${params.toString()}`
- *
- *   this.ws = new WebSocket(url)
- *   // ... rest of connection handling
- * }
- * ```
- *
- * Available subscription types:
- * - '/data/receipt' - Raw receipt data
- * - '/data/account' - Account state changes
- * - '/data/transaction' - Transaction data
- * - '/data/appReceipt' - Application receipt data
- *
- * Note: Subscriptions are set at connection time and cannot be changed dynamically.
- * To change subscriptions, disconnect and reconnect with new parameters.
- */
 export const setupCollectorSocketServer = (): void => {
   const wss = new WebSocketServer({ port: Number(CONFIG.port.collector) })
 
