@@ -119,8 +119,8 @@ const start = async (): Promise<void> => {
     Querystring: {
       count: string
       cycleNumber: string
-      start: string
-      end: string
+      startCycle: string
+      endCycle: string
       marker: string
     }
   }>
@@ -129,8 +129,8 @@ const start = async (): Promise<void> => {
     const err = utils.validateTypes(_request.query, {
       count: 's?',
       cycleNumber: 's?',
-      start: 's?',
-      end: 's?',
+      startCycle: 's?',
+      endCycle: 's?',
       marker: 's?',
     })
     if (err) {
@@ -139,7 +139,7 @@ const start = async (): Promise<void> => {
     }
     const query = _request.query
     // Check at least one of the query parameters is present
-    if (!query.count && !query.cycleNumber && !query.start && !query.end && !query.marker) {
+    if (!query.count && !query.cycleNumber && !query.startCycle && !query.endCycle && !query.marker) {
       reply.send({
         success: false,
         error: 'not specified which cycleinfo to query',
@@ -168,18 +168,28 @@ const start = async (): Promise<void> => {
       }
       const cycle = await CycleDB.queryCycleByCounter(cycleNumber)
       if (cycle) cycles = [cycle]
-    } else if (query.start && query.end) {
-      const from = parseInt(query.start)
-      const to = parseInt(query.end)
-      if (!(from >= 0 && to >= from) || Number.isNaN(from) || Number.isNaN(to)) {
-        console.log('Invalid start and end counters for cycleinfo')
-        reply.send({
-          success: false,
-          error: 'Invalid from and to counter for cycleinfo',
-        })
+    } else if (query.startCycle) {
+      const startCycle = parseInt(query.startCycle)
+      if (startCycle < 0 || Number.isNaN(startCycle)) {
+        reply.send({ success: false, error: 'Invalid start cycle number' })
         return
       }
-      cycles = await CycleDB.queryCycleRecordsBetween(from, to)
+      let endCycle = startCycle
+      if (query.endCycle) {
+        endCycle = parseInt(query.endCycle)
+        if (endCycle < 0 || Number.isNaN(endCycle) || endCycle < startCycle) {
+          reply.send({ success: false, error: 'Invalid end cycle number' })
+          return
+        }
+        if (endCycle - startCycle > config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST) {
+          reply.send({
+            success: false,
+            error: `The cycle range is too big. Max cycle range is ${config.requestLimits.MAX_BETWEEN_CYCLES_PER_REQUEST} cycles.`,
+          })
+          return
+        }
+      }
+      cycles = await CycleDB.queryCycleRecordsBetween(startCycle, endCycle)
       /* prettier-ignore */ if (config.verbose) console.log('cycles', cycles);
     } else if (query.marker) {
       const cycle = await CycleDB.queryCycleByMarker(query.marker)
