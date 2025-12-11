@@ -50,3 +50,8 @@ shardeum.sqlite*
 /data-logs
 /collector-db
 
+
+
+# Added by cargo
+
+/target
